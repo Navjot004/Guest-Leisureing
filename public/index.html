@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guest Leisureing • Luxury Resort & Leisure Management</title>
+  <meta name="description" content="Experience unparalleled luxury hospitality and bespoke leisure reservations with Guest Leisureing. Private yachts, Michelin dining, spa wellness, and Trackman suites." />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/guest.css" />
+
+  <style>
+    .hero-landing {
+      min-height: 85vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 140px 20px 60px;
+      position: relative;
+      background: radial-gradient(circle at 50% 25%, rgba(212, 175, 55, 0.12) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: 30px;
+      font-size: 0.85rem;
+      color: var(--gold-light);
+      margin-bottom: 24px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .hero-headline {
+      font-size: clamp(2.5rem, 5vw, 4.2rem);
+      line-height: 1.15;
+      max-width: 900px;
+      margin: 0 auto 24px;
+    }
+    .hero-subtext {
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto 36px;
+    }
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .features-section {
+      padding: 80px 5%;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .section-header h2 {
+      font-size: 2.4rem;
+      margin-bottom: 12px;
+    }
+    .section-header p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+    .admin-callout-strip {
+      background: linear-gradient(135deg, rgba(20, 30, 52, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      border-radius: var(--radius-xl);
+      padding: 36px 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin: 60px 5%;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.1);
+    }
+    footer {
+      border-top: 1px solid var(--glass-border);
+      padding: 40px 5%;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="brand-icon">⚜</div>
+      <span>Guest Leisureing</span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="/" class="active">Home</a>
+      <a href="#experiences">Experiences</a>
+      <a href="#about">About Haven</a>
+      <a href="/login.html">Sign In</a>
+      <a href="/admin-dashboard.html" style="color: var(--gold-light);">👑 Super Admin</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a href="/login.html" class="btn btn-ghost btn-sm">Sign In</a>
+      <a href="/register.html" class="btn btn-gold btn-sm">Register Guest</a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero-landing">
+      <div>
+        <div class="hero-badge">
+          <span>✨ 5-Star Hospitality & Bespoke Experiences</span>
+        </div>
+        <h1 class="hero-headline">
+          Where Curated Leisure Meets <span class="gold-gradient-text">Unrivaled Luxury</span>
+        </h1>
+        <p class="hero-subtext">
+          Indulge in private ocean catamaran charters, Michelin-curated chef tastings, thermal hydrotherapy rituals, and panoramic golf simulators.
+        </p>
+        <div class="hero-cta-group">
+          <a href="/register.html" class="btn btn-gold btn-lg">
+            Create Guest Account &rarr;
+          </a>
+          <a href="/login.html" class="btn btn-outline-gold btn-lg">
+            Guest & Admin Login
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Super Admin Access Banner -->
+    <section class="admin-callout-strip">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div style="width: 56px; height: 56px; border-radius: 16px; background: var(--gold-gradient); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: #0b111e;">
+          👑
+        </div>
+        <div>
+          <h3 style="font-size: 1.4rem; color: #fff; margin-bottom: 4px;">Super Admin Control Dashboard</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">
+            Hardcoded Super Admin access: ID: <code style="color: var(--gold-light); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">10001</code> | Password: <code style="color: var(--gold-light); background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">Master@2026</code>
+          </p>
+        </div>
+      </div>
+      <a href="/login.html" class="btn btn-gold">
+        Open Super Admin Portal &rarr;
+      </a>
+    </section>
+
+    <!-- Featured Experiences Section -->
+    <section id="experiences" class="features-section">
+      <div class="section-header">
+        <span class="badge badge-gold" style="margin-bottom: 12px;">Curated Itineraries</span>
+        <h2>Signature Leisure Packages</h2>
+        <p>Explore world-class leisure activities ready for instant booking</p>
+      </div>
+
+      <div class="experience-grid">
+        <!-- Experience 1 -->
+        <div class="experience-card">
+          <div class="experience-img-wrap">
+            <img src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80" class="experience-img" alt="Royal Spa" />
+            <div class="experience-badge">Wellness & Spa</div>
+            <div class="experience-rating">★ 4.95</div>
+          </div>
+          <div class="experience-body">
+            <h3 class="experience-title">Royal Hydrotherapy & Thai Spa</h3>
+            <p class="experience-desc">Ancient thermal pools, aromatic steam therapy, and deep-tissue hot stone massages designed by master therapists.</p>
+            <div class="experience-perks">
+              <span class="perk-tag">Organic Herbal Tea</span>
+              <span class="perk-tag">Private Steam Bath</span>
+            </div>
+            <div class="experience-footer">
+              <div class="experience-price">$240 <span>/ guest</span></div>
+              <a href="/login.html" class="btn btn-outline-gold btn-sm">Book Experience</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Experience 2 -->
+        <div class="experience-card">
+          <div class="experience-img-wrap">
+            <img src="https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=800&q=80" class="experience-img" alt="Yacht Charter" />
+            <div class="experience-badge">Adventure & Water</div>
+            <div class="experience-rating">★ 4.98</div>
+          </div>
+          <div class="experience-body">
+            <h3 class="experience-title">Sunset Yacht Charter & Champagne</h3>
+            <p class="experience-desc">Sail into amber horizons aboard a 62-foot luxury catamaran with personal captain, caviar canapés, and Dom Pérignon.</p>
+            <div class="experience-perks">
+              <span class="perk-tag">Private Skipper</span>
+              <span class="perk-tag">Vintage Champagne</span>
+            </div>
+            <div class="experience-footer">
+              <div class="experience-price">$580 <span>/ experience</span></div>
+              <a href="/login.html" class="btn btn-outline-gold btn-sm">Book Experience</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Experience 3 -->
+        <div class="experience-card">
+          <div class="experience-img-wrap">
+            <img src="https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&q=80" class="experience-img" alt="Chef Table" />
+            <div class="experience-badge">Culinary & Dining</div>
+            <div class="experience-rating">★ 4.92</div>
+          </div>
+          <div class="experience-body">
+            <h3 class="experience-title">Penthouse Michelin Star Chef Table</h3>
+            <p class="experience-desc">Exclusive 7-course culinary symphony orchestrated live by our Michelin resident chef with vintage cellar wines.</p>
+            <div class="experience-perks">
+              <span class="perk-tag">7-Course Menu</span>
+              <span class="perk-tag">Sommelier Pairing</span>
+            </div>
+            <div class="experience-footer">
+              <div class="experience-price">$320 <span>/ guest</span></div>
+              <a href="/login.html" class="btn btn-outline-gold btn-sm">Book Experience</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 Guest Leisureing Hospitality Group. All rights reserved. Connected to MongoDB Atlas Cloud.</p>
+  </footer>
+
+  <script src="/js/toast.js"></script>
+</body>
+</html>

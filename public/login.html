@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In • Guest Leisureing Luxury Platform</title>
+  <meta name="description" content="Sign in to your Guest Leisureing account or access the Super Admin Command Dashboard." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/auth.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="brand-icon">⚜</div>
+      <span>Guest Leisureing</span>
+    </a>
+    <div class="nav-actions">
+      <a href="/" class="btn btn-ghost btn-sm">Home</a>
+      <a href="/register.html" class="btn btn-outline-gold btn-sm">Register New Guest</a>
+    </div>
+  </header>
+
+  <div class="auth-wrapper">
+    <div class="auth-ambient-glow-1"></div>
+    <div class="auth-ambient-glow-2"></div>
+
+    <div class="auth-container">
+      <!-- Left Showcase Panel -->
+      <div class="auth-showcase" style="background-image: url('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80');">
+        <div class="auth-showcase-content">
+          <div class="showcase-badge">
+            <span>⚜ Luxury Leisure Hospitality</span>
+          </div>
+          <h2 class="showcase-title">
+            Reclaim Your Time in <span class="gold-gradient-text">Absolute Splendor</span>
+          </h2>
+          <p class="showcase-text">
+            Access customized itineraries, yacht bookings, private dining sessions, and our full spectrum of 5-star amenities.
+          </p>
+
+          <div class="showcase-perks">
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Instant Leisure & Activity Reservations</span>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Super Admin Real-Time Database Management</span>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Encrypted High-Availability MongoDB Cloud</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-footer">
+          <div>
+            <div class="rating-stars">★★★★★</div>
+            <span style="font-size: 0.85rem; color: #cbd5e1;">Voted #1 Luxury Experience 2026</span>
+          </div>
+          <span class="badge badge-gold">Verified Platform</span>
+        </div>
+      </div>
+
+      <!-- Right Form Panel -->
+      <div class="auth-form-panel">
+        <div id="already-logged-banner" style="display: none;"></div>
+
+        <div class="auth-header">
+          <h1 id="login-header-title">Welcome Back</h1>
+          <p class="auth-subtitle">Choose your access portal below to continue</p>
+        </div>
+
+        <!-- Portal Tabs -->
+        <div class="auth-tabs">
+          <button type="button" id="tab-guest" class="auth-tab-btn active">
+            <span>👤 Guest & VIP Login</span>
+          </button>
+          <button type="button" id="tab-admin" class="auth-tab-btn">
+            <span>👑 Super Admin Portal</span>
+          </button>
+        </div>
+
+        <!-- Super Admin Credentials Info Notice -->
+        <div id="admin-callout" class="superadmin-callout" style="display: none;">
+          <div class="superadmin-callout-icon">🔐</div>
+          <div>
+            <h4>Hardcoded Super Admin Access</h4>
+            <p>
+              Admin ID: <span class="demo-chip">10001</span><br />
+              Master Password: <span class="demo-chip">Master@2026</span>
+            </p>
+            <button type="button" id="btn-autofill-admin" class="btn-autofill">
+              ⚡ 1-Click Auto-Fill Super Admin Credentials
+            </button>
+          </div>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="login-identifier">Email Address or Admin ID</label>
+            <input
+              type="text"
+              id="login-identifier"
+              class="form-control"
+              placeholder="guest@example.com or 10001"
+              required
+              autocomplete="username"
+            />
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="form-label" for="login-password" style="margin-bottom: 0;">Password</label>
+              <button type="button" id="btn-autofill-guest" style="background: none; border: none; color: var(--gold-light); font-size: 0.78rem; cursor: pointer; text-decoration: underline;">
+                Need sample guest login?
+              </button>
+            </div>
+            <div class="input-with-icon">
+              <input
+                type="password"
+                id="login-password"
+                class="form-control"
+                placeholder="Enter your password"
+                required
+                autocomplete="current-password"
+              />
+              <button type="button" class="toggle-password" data-target="login-password" title="Show/Hide password">
+                🔒
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 10px;">
+            Sign In &rarr;
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Don't have an account yet? 
+          <a href="/register.html">Register as Guest</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/toast.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

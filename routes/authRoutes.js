@@ -1,0 +1,294 @@
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const VerifiedStaff = require('../models/VerifiedStaff');
+const { verifyToken, JWT_SECRET } = require('../middleware/auth');
+
+const SUPER_ADMIN_ID = process.env.SUPER_ADMIN_ID || '10001';
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'Master@2026';
+
+// @route   POST /api/auth/login
+// @desc    Login either Super Admin (hardcoded 10001 / Master@2026) or registered Guest/Staff
+router.post('/login', async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    if (!identifier || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide both your ID / Email and password.' 
+      });
+    }
+
+    const cleanIdentifier = identifier.toString().trim();
+    const cleanPassword = password.toString().trim();
+
+    // 1. Check for HARDCODED SUPER ADMIN CREDENTIALS (ID: 10001, Pass: Master@2026)
+    if (
+      (cleanIdentifier === SUPER_ADMIN_ID || cleanIdentifier.toLowerCase() === 'superadmin@guestleisureing.com') &&
+      cleanPassword === SUPER_ADMIN_PASSWORD
+    ) {
+      const superAdminPayload = {
+        id: SUPER_ADMIN_ID,
+        name: 'Super Administrator',
+        email: 'superadmin@guestleisureing.com',
+        role: 'superadmin',
+        isSuperAdmin: true,
+      };
+
+      const token = jwt.sign(superAdminPayload, JWT_SECRET, { expiresIn: '12h' });
+
+      return res.json({
+        success: true,
+        message: 'Super Admin authentication verified successfully!',
+        token,
+        user: superAdminPayload,
+        redirectUrl: '/admin-dashboard.html',
+      });
+    }
+
+    // 2. Otherwise authenticate against MongoDB Users collection (by email or staffId)
+    const user = await User.findOne({
+      $or: [
+        { email: cleanIdentifier.toLowerCase() },
+        { staffId: cleanIdentifier },
+      ],
+    });
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials. User with this Email or Staff ID does not exist.' 
+      });
+    }
+
+    if (user.status === 'suspended') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been suspended by the administrator. Please contact support.' 
+      });
+    }
+
+    const isMatch = await bcrypt.compare(cleanPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid password. Please check your credentials.' 
+      });
+    }
+
+    // Update lastLogin
+    user.lastLogin = new Date();
+    await user.save();
+
+    const payload = {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      staffId: user.staffId,
+      department: user.department,
+      designation: user.designation,
+      isDeptAdmin: Boolean(user.isDeptAdmin || user.role === 'dept_admin'),
+      adminDepartment: user.adminDepartment || user.department || '',
+      preferences: user.preferences,
+      isSuperAdmin: false,
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+    return res.json({
+      success: true,
+      message: `Welcome back, ${user.name}!`,
+      token,
+      user: payload,
+      redirectUrl: '/guest-dashboard.html',
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error during authentication: ' + error.message 
+    });
+  }
+});
+
+// @route   POST /api/auth/register
+// @desc    Register a new Guest user into MongoDB Atlas
+router.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, phone, role, staffId, preferences } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Full name, email, and password are required.' 
+      });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanName = name.trim();
+    const cleanStaffId = (staffId || '').toString().trim();
+    const targetRole = role === 'staff' ? 'staff' : 'guest';
+
+    // Prevent registering with superadmin credentials
+    if (cleanEmail === 'superadmin@guestleisureing.com' || cleanEmail === SUPER_ADMIN_ID) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This identifier is reserved for System Administration.' 
+      });
+    }
+
+    // Check if user already exists
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'An account with this email address is already registered.' 
+      });
+    }
+
+    // Password strength check
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long.' 
+      });
+    }
+
+    // VERIFIED STAFF RESTRICTION CHECK
+    let matchedVerifiedStaff = null;
+    if (targetRole === 'staff') {
+      const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      const queryConditions = [
+        { email: cleanEmail },
+        { name: { $regex: new RegExp(`^${escapedName}$`, 'i') } },
+      ];
+
+      if (cleanStaffId) {
+        queryConditions.push({ staffId: cleanStaffId });
+      }
+
+      matchedVerifiedStaff = await VerifiedStaff.findOne({ $or: queryConditions });
+
+      if (!matchedVerifiedStaff) {
+        return res.status(403).json({
+          success: false,
+          message: `Staff registration denied: Your name ("${cleanName}") or email ("${cleanEmail}") is not in the Verified Staff List uploaded by the Super Admin. Please contact administration.`,
+        });
+      }
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user in MongoDB
+    const newUser = new User({
+      name: cleanName,
+      email: cleanEmail,
+      password: hashedPassword,
+      phone: phone ? phone.trim() : (matchedVerifiedStaff ? matchedVerifiedStaff.phone : ''),
+      staffId: cleanStaffId || (matchedVerifiedStaff ? matchedVerifiedStaff.staffId : ''),
+      department: matchedVerifiedStaff ? matchedVerifiedStaff.department : '',
+      designation: matchedVerifiedStaff ? matchedVerifiedStaff.designation : '',
+      role: targetRole,
+      preferences: Array.isArray(preferences) && preferences.length > 0 
+        ? preferences 
+        : ['Wellness & Spa', 'Fine Dining'],
+      lastLogin: new Date(),
+    });
+
+    await newUser.save();
+
+    // If verified staff record matched, update it
+    if (matchedVerifiedStaff) {
+      matchedVerifiedStaff.isRegistered = true;
+      matchedVerifiedStaff.registeredUserId = newUser._id;
+      await matchedVerifiedStaff.save();
+    }
+
+    const payload = {
+      id: newUser._id.toString(),
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      phone: newUser.phone,
+      staffId: newUser.staffId,
+      department: newUser.department,
+      designation: newUser.designation,
+      preferences: newUser.preferences,
+      isSuperAdmin: false,
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+    return res.status(201).json({
+      success: true,
+      message: targetRole === 'staff' 
+        ? `Staff verification verified! Welcome, ${newUser.name}.`
+        : 'Registration successful! Welcome to Guest Leisureing.',
+      token,
+      user: payload,
+      redirectUrl: '/guest-dashboard.html',
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error during registration: ' + error.message 
+    });
+  }
+});
+
+// @route   GET /api/auth/me
+// @desc    Get currently logged in profile
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role === 'superadmin' && req.user.id === SUPER_ADMIN_ID) {
+      return res.json({
+        success: true,
+        user: {
+          id: SUPER_ADMIN_ID,
+          name: 'Super Administrator',
+          email: 'superadmin@guestleisureing.com',
+          role: 'superadmin',
+          isSuperAdmin: true,
+        },
+      });
+    }
+
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+        staffId: user.staffId,
+        department: user.department,
+        designation: user.designation,
+        isDeptAdmin: Boolean(user.isDeptAdmin || user.role === 'dept_admin'),
+        adminDepartment: user.adminDepartment || user.department || '',
+        preferences: user.preferences,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        isSuperAdmin: false,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+module.exports = router;

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register Guest Account • Guest Leisureing</title>
+  <meta name="description" content="Register your luxury guest account at Guest Leisureing to unlock bespoke resort experiences, yachting, spa rituals, and gourmet dining." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/auth.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <div class="brand-icon">⚜</div>
+      <span>Guest Leisureing</span>
+    </a>
+    <div class="nav-actions">
+      <a href="/" class="btn btn-ghost btn-sm">Home</a>
+      <a href="/login.html" class="btn btn-gold btn-sm">Sign In</a>
+    </div>
+  </header>
+
+  <div class="auth-wrapper">
+    <div class="auth-ambient-glow-1"></div>
+    <div class="auth-ambient-glow-2"></div>
+
+    <div class="auth-container">
+      <!-- Left Showcase Panel -->
+      <div class="auth-showcase" style="background-image: url('https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=1000&q=80');">
+        <div class="auth-showcase-content">
+          <div class="showcase-badge">
+            <span>🌟 Exclusive Guest Registration</span>
+          </div>
+          <h2 class="showcase-title">
+            Step Into a Haven of <span class="gold-gradient-text">Refined Leisure</span>
+          </h2>
+          <p class="showcase-text">
+            Register your guest profile directly into our secure MongoDB cloud. Experience instant booking confirmations, personalized concierge service, and VIP status tiering.
+          </p>
+
+          <div class="showcase-perks">
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Complimentary Welcome Spa Hydrotherapy Session</span>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Priority Access to Sunset Yacht Charters</span>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon">✓</div>
+              <span>Michelin-Starred Chef Reservation Privileges</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-footer">
+          <div>
+            <div class="rating-stars">★★★★★</div>
+            <span style="font-size: 0.85rem; color: #cbd5e1;">5-Star Concierge Excellence</span>
+          </div>
+          <span class="badge badge-gold">MongoDB Cloud Backed</span>
+        </div>
+      </div>
+
+      <!-- Right Form Panel -->
+      <div class="auth-form-panel">
+        <div class="auth-header">
+          <h1>Create Guest Profile</h1>
+          <p class="auth-subtitle">Fill in your information to join Guest Leisureing</p>
+        </div>
+
+        <form id="register-form">
+          <div class="form-group">
+            <label class="form-label" for="register-name">Full Name *</label>
+            <input
+              type="text"
+              id="register-name"
+              class="form-control"
+              placeholder="Lord / Lady Alexander Wright"
+              required
+            />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label" for="register-email">Email Address *</label>
+              <input
+                type="email"
+                id="register-email"
+                class="form-control"
+                placeholder="alexander@luxury.com"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="register-phone">Phone Number</label>
+              <input
+                type="tel"
+                id="register-phone"
+                class="form-control"
+                placeholder="+1 (555) 019-2834"
+              />
+            </div>
+          </div>
+
+          <!-- Passwords with Strength Indicator -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label class="form-label" for="register-password">Password *</label>
+              <div class="input-with-icon">
+                <input
+                  type="password"
+                  id="register-password"
+                  class="form-control"
+                  placeholder="Min. 6 chars"
+                  required
+                />
+                <button type="button" class="toggle-password" data-target="register-password" title="Show/Hide">
+                  🔒
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="register-confirm-password">Confirm Password *</label>
+              <div class="input-with-icon">
+                <input
+                  type="password"
+                  id="register-confirm-password"
+                  class="form-control"
+                  placeholder="Re-type password"
+                  required
+                />
+                <button type="button" class="toggle-password" data-target="register-confirm-password" title="Show/Hide">
+                  🔒
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Password Strength Visual Bar -->
+          <div class="password-strength-container" style="margin-top: -10px; margin-bottom: 16px;">
+            <div class="strength-bar-track">
+              <div id="strength-bar-fill" class="strength-bar-fill"></div>
+            </div>
+            <div class="strength-label">
+              <span>Password Security:</span>
+              <strong id="strength-text" style="color: var(--text-dim);">Enter password</strong>
+            </div>
+          </div>
+
+          <!-- Leisure Preferences -->
+          <div class="form-group">
+            <label class="form-label">Select Your Leisure Passions</label>
+            <div class="preference-chips">
+              <label class="chip-label">
+                <input type="checkbox" name="preferences" value="Wellness & Spa" checked />
+                <span class="chip">🧘 Wellness & Spa</span>
+              </label>
+              <label class="chip-label">
+                <input type="checkbox" name="preferences" value="Fine Dining" checked />
+                <span class="chip">🍷 Fine Dining</span>
+              </label>
+              <label class="chip-label">
+                <input type="checkbox" name="preferences" value="Adventure & Water" />
+                <span class="chip">⛵ Yachting & Watersports</span>
+              </label>
+              <label class="chip-label">
+                <input type="checkbox" name="preferences" value="VIP Entertainment" />
+                <span class="chip">🥂 VIP Entertainment</span>
+              </label>
+              <label class="chip-label">
+                <input type="checkbox" name="preferences" value="Sports & Golf" />
+                <span class="chip">🏌️ Championship Golf</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 10px;">
+            Complete Registration &rarr;
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Already registered as a guest or admin? 
+          <a href="/login.html">Sign In Here</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/toast.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
