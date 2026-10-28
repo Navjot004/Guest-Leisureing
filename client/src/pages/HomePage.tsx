@@ -6,9 +6,8 @@ import {
   CheckCircleIcon,
   CopyIcon,
   ClockIcon,
-  BedIcon,
-  UtensilsIcon,
   CheckIcon,
+  ShieldIcon,
 } from '../components/Icons';
 
 interface HomePageProps {
@@ -42,30 +41,33 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
     }
   }, [location.search]);
 
-  // Form State - Real Campus Stay
+  // Step 1: Visitor Profile & Campus Visit Clearance (Mandatory)
   const [guestName, setGuestName] = useState(currentUser?.name || '');
   const [guestEmail, setGuestEmail] = useState(currentUser?.email || '');
   const [guestPhone, setGuestPhone] = useState(currentUser?.phone || '');
-  const [visitorCategory, setVisitorCategory] = useState('External Examiner');
+  const [visitorCategory, setVisitorCategory] = useState('External Examiner (PhD/Viva)');
   const [institution, setInstitution] = useState('');
-  const [hostDepartment, setHostDepartment] = useState('');
+  const [hostDepartment, setHostDepartment] = useState('Department of Computer Science & Engineering');
+  const [hostFacultyRef, setHostFacultyRef] = useState('');
+  const [visitDate, setVisitDate] = useState('');
   const [purposeOfVisit, setPurposeOfVisit] = useState('');
 
-  // Accommodation - Campus Realistic
-  const [reqAccommodation, setReqAccommodation] = useState(true);
+  // Step 2: Optional Facilities (Opt-in)
+  // Facility A: Accommodation
+  const [reqAccommodation, setReqAccommodation] = useState(false);
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
   const [roomType, setRoomType] = useState('Faculty Transit Room');
   const [guestsCount, setGuestsCount] = useState(1);
   const [stayNotes, setStayNotes] = useState('');
 
-  // Food - Hostel Mess & Canteen
-  const [reqFood, setReqFood] = useState(true);
+  // Facility B: Food & Hostel Mess
+  const [reqFood, setReqFood] = useState(false);
   const [dietaryPref, setDietaryPref] = useState('Vegetarian (Mess Thali)');
-  const [meals, setMeals] = useState<string[]>(['Breakfast', 'Lunch', 'Dinner']);
+  const [meals, setMeals] = useState<string[]>(['Lunch']);
   const [foodNotes, setFoodNotes] = useState('');
 
-  // Transport - Campus Shuttle / Gate Pickup (Optional)
+  // Facility C: Transport / Campus Shuttle
   const [reqTransport, setReqTransport] = useState(false);
   const [pickupLoc, setPickupLoc] = useState('University Main Gate');
   const [pickupTime, setPickupTime] = useState('');
@@ -107,18 +109,31 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
     e.preventDefault();
     setFormError(null);
 
+    // Validation 1: Mandatory Visitor Information
     if (!guestName.trim() || !guestEmail.trim()) {
       setFormError('Please enter your full name and official email address.');
       return;
     }
 
-    if (!reqAccommodation && !reqFood) {
-      setFormError('Please select at least one facility (Campus Lodging or Mess Dining).');
+    if (!hostDepartment.trim()) {
+      setFormError('Please specify the CT University Host Department you are visiting.');
       return;
     }
 
+    if (!purposeOfVisit.trim()) {
+      setFormError('Please provide the official purpose of your campus visit.');
+      return;
+    }
+
+    // Validation 2: If Accommodation is requested, dates are required
     if (reqAccommodation && (!checkInDate || !checkOutDate)) {
-      setFormError('Please choose your Check-In and Check-Out dates.');
+      setFormError('Since you requested On-Campus Lodging, please choose your Check-In and Check-Out dates.');
+      return;
+    }
+
+    // Validation 3: If Mess is requested, at least one meal must be selected
+    if (reqFood && meals.length === 0) {
+      setFormError('Since you requested Hostel Mess Dining, please select at least one meal (Breakfast, Lunch, or Dinner).');
       return;
     }
 
@@ -132,34 +147,37 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      const effectiveCheckIn = reqAccommodation ? checkInDate : (visitDate || new Date().toISOString().split('T')[0]);
+      const effectiveCheckOut = reqAccommodation ? checkOutDate : (visitDate || new Date().toISOString().split('T')[0]);
+
       const payload = {
-        guestName,
-        guestEmail,
-        guestPhone,
+        guestName: guestName.trim(),
+        guestEmail: guestEmail.trim(),
+        guestPhone: guestPhone.trim(),
         designation: visitorCategory,
-        institution,
-        purposeOfVisit: hostDepartment ? `[Host: ${hostDepartment}] ${purposeOfVisit}` : purposeOfVisit,
+        institution: institution.trim(),
+        purposeOfVisit: `[Host: ${hostDepartment.trim()}${hostFacultyRef ? ' | Ref: ' + hostFacultyRef.trim() : ''}] [Visit Date: ${visitDate || effectiveCheckIn}] ${purposeOfVisit.trim()}`,
         accommodation: {
           selected: reqAccommodation,
-          checkInDate,
-          checkOutDate,
-          roomType,
-          guestsCount,
-          specialRequests: stayNotes,
+          checkInDate: effectiveCheckIn,
+          checkOutDate: effectiveCheckOut,
+          roomType: reqAccommodation ? roomType : 'Day Visit (No Room)',
+          guestsCount: reqAccommodation ? guestsCount : 1,
+          specialRequests: stayNotes.trim(),
         },
         food: {
           selected: reqFood,
-          dietaryPreference: dietaryPref,
-          mealsRequired: meals,
-          specialDietaryNotes: foodNotes,
+          dietaryPreference: reqFood ? dietaryPref : 'Vegetarian',
+          mealsRequired: reqFood ? meals : [],
+          specialDietaryNotes: foodNotes.trim(),
         },
         transport: {
           selected: reqTransport,
-          pickupLocation: pickupLoc,
+          pickupLocation: reqTransport ? pickupLoc : '',
           dropLocation: 'Hostel / Transit Quarters',
-          pickupDateTime: pickupTime,
+          pickupDateTime: reqTransport ? pickupTime : '',
           vehiclePreference: 'Campus Shuttle',
-          specialRequests: transportNotes,
+          specialRequests: transportNotes.trim(),
         },
         leisure: {
           selected: false,
@@ -176,7 +194,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to submit stay request.');
+        throw new Error(data.message || 'Failed to submit campus visit request.');
       }
 
       setSubmitSuccess({
@@ -224,13 +242,70 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
   };
 
   return (
-    <div style={{ padding: '1.5rem 1rem' }}>
+    <div style={{ padding: '1.5rem 1rem 3rem' }}>
       <main style={{ maxWidth: '1080px', margin: '0 auto' }}>
-        {/* Official Campus Notice Disclaimer */}
-        <div className="uni-notice-banner">
-          <div className="uni-notice-icon">ℹ️</div>
-          <div>
-            <strong>Campus Lodging & Mess Notice:</strong> This intake portal provides standard on-campus accommodation (Faculty Transit Quarters & Hostel Guest Rooms) and daily Mess meals for visiting professors, external examiners, seminar speakers, and students' parents. <em>University facilities are academic & standard; for commercial luxury or hotel amenities, please arrange an external hotel stay.</em>
+        
+        {/* Official Institutional Banner Header */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1E3A8A 0%, #172554 100%)',
+            color: '#FFFFFF',
+            borderRadius: '10px',
+            padding: '2rem 1.75rem',
+            marginBottom: '1.5rem',
+            boxShadow: '0 4px 15px rgba(30, 58, 138, 0.15)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: '720px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  marginBottom: '10px',
+                }}
+              >
+                <span>🏛️</span>
+                <span>CT UNIVERSITY • CAMPUS VISITOR CLEARANCE PORTAL</span>
+              </div>
+              <h1 style={{ fontSize: '1.65rem', fontWeight: 800, margin: '0 0 8px 0', lineHeight: 1.25 }}>
+                Official Campus Visit Clearance & Guest Facilities
+              </h1>
+              <p style={{ fontSize: '0.875rem', color: '#CBD5E1', margin: 0, lineHeight: 1.5 }}>
+                All outside academic visitors (External PhD/Viva Examiners, Visiting Faculty, Keynote Speakers, and Student Guardians) must obtain university visit clearance. You may optionally request transit accommodation in Faculty Quarters, hostel mess dining, and campus gate shuttle below.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
+              <div style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 600, textTransform: 'uppercase' }}>
+                Quick Actions
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                style={{ background: '#FFFFFF', color: '#1E3A8A', fontWeight: 600, justifyContent: 'flex-start' }}
+                onClick={() => setActiveTab('track')}
+              >
+                <SearchIcon size={14} />
+                <span>Track Existing Entry Pass</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#FFFFFF', justifyContent: 'flex-start' }}
+                onClick={() => setActiveTab('guidelines')}
+              >
+                <ClockIcon size={14} />
+                <span>Hostel & Mess Rules</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -254,10 +329,11 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
               <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🛡️</span>
               <div>
                 <div style={{ fontWeight: 700, color: '#92400E', fontSize: '0.95rem' }}>
-                  CT University Staff Directive ({currentUser?.name})
+                  CT University Staff Notice ({currentUser?.name})
                 </div>
                 <div style={{ color: '#78350F', fontSize: '0.85rem', marginTop: '3px', lineHeight: 1.45 }}>
-                  <strong>Ye form sirf external guests, visiting professors, viva examiners aur parents ke liye hai.</strong> University admin ya staff ko stay apply karne ki zaroorat nahi hoti. Aapka role pending guest applications ko approve karke hostel rooms aur mess allotment approve karna hai.
+                  You are logged in as <strong>{currentUser?.name}</strong> ({currentUser?.email}). 
+                  <strong> Ye form sirf external guests, examiners aur parents ke liye hai.</strong> University staff yahan visit permission apply nahi karte — aapka kaam caretaker desk par room aur mess allot karna hai.
                 </div>
               </div>
             </div>
@@ -284,15 +360,15 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
           </div>
         )}
 
-        {/* Top Navigation Tabs */}
+        {/* Clean Sub-Navigation Tabs */}
         <div className="uni-tabs-container">
           <button
             type="button"
             className={`uni-tab-btn ${activeTab === 'apply' ? 'active' : ''}`}
             onClick={() => setActiveTab('apply')}
           >
-            <BedIcon size={16} />
-            <span>1. Guest Application (Visitors Only)</span>
+            <ShieldIcon size={16} />
+            <span>1. Campus Visit Clearance & Facilities Request</span>
           </button>
 
           <button
@@ -301,7 +377,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             onClick={() => setActiveTab('track')}
           >
             <SearchIcon size={16} />
-            <span>2. Track Application / Check-In Pass</span>
+            <span>2. Track Entry Pass & Allotment Status</span>
           </button>
 
           <button
@@ -310,15 +386,13 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             onClick={() => setActiveTab('guidelines')}
           >
             <ClockIcon size={16} />
-            <span>3. Hostel & Mess Guidelines</span>
+            <span>3. Visitor & Hostel Guidelines</span>
           </button>
-
-          <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748B', paddingRight: '8px' }}>
-            No advance login needed • Instant Reference Code
-          </div>
         </div>
 
-        {/* TAB 1: APPLY FOR STAY & MESS */}
+        {/* =========================================================================
+            TAB 1: OFFICIAL CAMPUS VISIT CLEARANCE & OPTIONAL FACILITIES
+           ========================================================================= */}
         {activeTab === 'apply' && (
           <div className="uni-card">
             {submitSuccess ? (
@@ -339,11 +413,15 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                   <CheckCircleIcon size={36} />
                 </div>
 
+                <div style={{ display: 'inline-block', background: '#DCFCE7', color: '#166534', padding: '4px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, marginBottom: '8px' }}>
+                  CAMPUS VISIT CLEARANCE REGISTERED
+                </div>
+
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
-                  Campus Stay Application Registered!
+                  Official Visit Permit Generated!
                 </h2>
-                <p style={{ color: '#475569', maxWidth: '580px', margin: '0 auto 1.5rem', lineHeight: '1.5' }}>
-                  Your request has been forwarded to the <strong>Hostel Warden / Facility Caretaker</strong> for room verification and mess meal slip generation.
+                <p style={{ color: '#475569', maxWidth: '600px', margin: '0 auto 1.5rem', lineHeight: '1.5', fontSize: '0.9rem' }}>
+                  Your campus visit clearance request has been forwarded to the <strong>Host Department & Hostel Caretaker Desk</strong>. Please present this reference code at the University Security Gate upon arrival.
                 </p>
 
                 <div
@@ -353,16 +431,16 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     gap: '16px',
                     background: '#F1F5F9',
                     border: '1px solid #CBD5E1',
-                    padding: '12px 20px',
+                    padding: '12px 24px',
                     borderRadius: '8px',
-                    marginBottom: '2rem',
+                    marginBottom: '1.75rem',
                   }}
                 >
                   <div>
                     <div style={{ fontSize: '0.6875rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
-                      Your Tracking Reference Code
+                      Gate Entry Reference Code
                     </div>
-                    <div style={{ fontSize: '1.35rem', color: '#1E3A8A', fontWeight: 800, letterSpacing: '0.04em' }}>
+                    <div style={{ fontSize: '1.5rem', color: '#1E3A8A', fontWeight: 800, letterSpacing: '0.04em' }}>
                       {submitSuccess.referenceCode}
                     </div>
                   </div>
@@ -376,6 +454,19 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                   </button>
                 </div>
 
+                {/* Facility Summary Badges */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                  <span style={{ background: '#EEF2FF', color: '#1E3A8A', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    🏛️ Visit Clearance: Registered
+                  </span>
+                  <span style={{ background: submitSuccess.request.accommodation?.selected ? '#FEF3C7' : '#F1F5F9', color: submitSuccess.request.accommodation?.selected ? '#92400E' : '#64748B', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    🛏️ Lodging: {submitSuccess.request.accommodation?.selected ? (submitSuccess.request.accommodation.roomType || 'Requested') : 'Not Requested'}
+                  </span>
+                  <span style={{ background: submitSuccess.request.food?.selected ? '#ECFDF5' : '#F1F5F9', color: submitSuccess.request.food?.selected ? '#065F46' : '#64748B', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                    🍽️ Mess Dining: {submitSuccess.request.food?.selected ? 'Meal Slip Requested' : 'Not Requested'}
+                  </span>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
@@ -387,7 +478,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     }}
                   >
                     <SearchIcon size={14} />
-                    <span>Check Application Status</span>
+                    <span>View Digital Entry Pass</span>
                   </button>
                   <button
                     type="button"
@@ -395,28 +486,31 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     onClick={() => {
                       setSubmitSuccess(null);
                       setPurposeOfVisit('');
+                      setReqAccommodation(false);
+                      setReqFood(false);
+                      setReqTransport(false);
                     }}
                   >
-                    Submit Another Application
+                    Submit Another Visitor Clearance
                   </button>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleApplyStay}>
                 <div className="uni-card-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                     <span style={{ background: '#EEF2FF', color: '#1E3A8A', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
-                      FOR OUTSIDE GUESTS & VISITORS ONLY
+                      VISITOR CLEARANCE & GATE PASS
                     </span>
                     <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                      Visiting Faculty • Viva Examiners • Parents • Conference Delegates
+                      Examiners • Guest Faculty • Parents • Conference Attendees
                     </span>
                   </div>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
-                    Application for Transit Lodging & Hostel Mess Facility
+                  <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
+                    Application for Campus Visit Clearance & Guest Facilities
                   </h2>
                   <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
-                    Please provide your visit schedule and host department endorsement details. Rooms are allotted based on academic duty and availability. <em>(University staff should manage allocations from the Caretaker Desk).</em>
+                    Please provide your official visitor profile and institutional endorsement details. Once submitted, your visit clearance will be issued, and any optional on-campus lodging or mess dining will be coordinated by the Caretaker Desk.
                   </p>
                 </div>
 
@@ -433,25 +527,32 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                         fontSize: '0.875rem',
                       }}
                     >
-                      {formError}
+                      ⚠️ {formError}
                     </div>
                   )}
 
-                  {/* STEP 1: VISITOR IDENTIFICATION & ENDORSEMENT */}
-                  <div style={{ marginBottom: '1.75rem' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
-                      Step 1: Visitor Profile & University Reference
+                  {/* =======================================================
+                      PART 1: VISITOR IDENTIFICATION & ENDORSEMENT (MANDATORY)
+                     ======================================================= */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1.5px solid #E2E8F0', paddingBottom: '8px', marginBottom: '1.25rem' }}>
+                      <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#1E3A8A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                        1
+                      </span>
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                        Official Visitor Profile & Campus Visit Purpose (Mandatory)
+                      </h3>
                     </div>
 
                     <div className="responsive-form-grid">
                       <div>
                         <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                          Full Name *
+                          Visitor Full Name *
                         </label>
                         <input
                           type="text"
                           className="input-text"
-                          placeholder="e.g. Prof. R. K. Sharma"
+                          placeholder="e.g. Prof. R. K. Sharma / Dr. Ananya Sen"
                           value={guestName}
                           onChange={(e) => setGuestName(e.target.value)}
                           required
@@ -465,7 +566,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                         <input
                           type="email"
                           className="input-text"
-                          placeholder="e.g. guest@university.ac.in"
+                          placeholder="e.g. examiner@university.ac.in"
                           value={guestEmail}
                           onChange={(e) => setGuestEmail(e.target.value)}
                           required
@@ -495,24 +596,24 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                           value={visitorCategory}
                           onChange={(e) => setVisitorCategory(e.target.value)}
                         >
-                          <option value="External Examiner (PhD/Viva)">External Examiner (PhD/Viva)</option>
-                          <option value="Visiting Professor / Guest Speaker">Visiting Professor / Guest Speaker</option>
+                          <option value="External Examiner (PhD/Viva)">External Examiner (PhD/Viva Voce)</option>
+                          <option value="Visiting Professor / Guest Speaker">Visiting Professor / Keynote Speaker</option>
                           <option value="Parent / Guardian of Student">Parent / Guardian of Student</option>
                           <option value="Research Scholar / Visiting Student">Research Scholar / Visiting Student</option>
                           <option value="Conference / Seminar Delegate">Conference / Seminar Delegate</option>
                           <option value="Sports / University Team Member">Sports / University Team Member</option>
-                          <option value="Official Academic Guest">Official Academic Guest</option>
+                          <option value="Official Academic / Regulatory Guest">Official Academic / Regulatory Guest</option>
                         </select>
                       </div>
 
                       <div>
                         <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                          Home University / Institution
+                          Home University / Organization
                         </label>
                         <input
                           type="text"
                           className="input-text"
-                          placeholder="e.g. IIT Delhi / Delhi University"
+                          placeholder="e.g. IIT Delhi / Panjab University / Govt. Dept"
                           value={institution}
                           onChange={(e) => setInstitution(e.target.value)}
                         />
@@ -520,96 +621,142 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
                       <div>
                         <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                          Host Department / Faculty Reference *
+                          Host Department at CT University *
                         </label>
                         <input
                           type="text"
                           className="input-text"
-                          placeholder="e.g. Dept of Physics / HOD Office / Student Roll No"
+                          placeholder="e.g. Department of Computer Science & Engineering"
                           value={hostDepartment}
                           onChange={(e) => setHostDepartment(e.target.value)}
                           required
                         />
                       </div>
+
+                      <div>
+                        <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
+                          Inviting Faculty / Host Reference
+                        </label>
+                        <input
+                          type="text"
+                          className="input-text"
+                          placeholder="e.g. Dr. H. S. Bawa / Dean Office / Student Roll No"
+                          value={hostFacultyRef}
+                          onChange={(e) => setHostFacultyRef(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
+                          Planned Date of Campus Visit *
+                        </label>
+                        <input
+                          type="date"
+                          className="input-text"
+                          value={visitDate}
+                          onChange={(e) => setVisitDate(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
 
-                    <div style={{ marginTop: '0.75rem' }}>
+                    <div style={{ marginTop: '0.875rem' }}>
                       <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                        Purpose of Visit
+                        Purpose of Campus Visit *
                       </label>
                       <input
                         type="text"
                         className="input-text"
-                        placeholder="e.g. Conduct PhD Viva Voce Examination, Guest Lecture on Quantum Computing"
+                        placeholder="e.g. Conduct M.Tech Thesis Viva Voce Examination in CSE Department"
                         value={purposeOfVisit}
                         onChange={(e) => setPurposeOfVisit(e.target.value)}
+                        required
                       />
                     </div>
                   </div>
 
-                  {/* STEP 2: CAMPUS ACCOMMODATION SELECTION */}
-                  <div style={{ marginBottom: '1.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Step 2: Campus Accommodation (Hostel / Faculty Transit)
+                  {/* =======================================================
+                      PART 2: OPTIONAL CAMPUS FACILITIES (CHOOSE WHAT YOU NEED)
+                     ======================================================= */}
+                  <div style={{ marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid #E2E8F0', paddingBottom: '8px', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#059669', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                          2
+                        </span>
+                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                          Campus Hospitality & Facilities (Optional Add-ons)
+                        </h3>
                       </div>
-                      <label style={{ fontSize: '0.8125rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={reqAccommodation}
-                          onChange={(e) => setReqAccommodation(e.target.checked)}
-                        />
-                        <span>Need On-Campus Lodging</span>
-                      </label>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                        Tick checkboxes below only if you require lodging, mess meals, or gate shuttle.
+                      </span>
                     </div>
 
-                    {reqAccommodation && (
-                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                        <div className="uni-room-grid">
-                          {/* Room Type 1 */}
-                          <div
-                            className={`uni-room-card ${roomType === 'Faculty Transit Room' ? 'selected' : ''}`}
-                            onClick={() => setRoomType('Faculty Transit Room')}
-                          >
-                            <div>
+                    {/* FACILITY A: ON-CAMPUS LODGING */}
+                    <div style={{ border: reqAccommodation ? '1.5px solid #1E3A8A' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.25rem', background: reqAccommodation ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.4rem' }}>🛏️</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                              On-Campus Transit Accommodation
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              Faculty Transit Quarters & Hostel Guest Rooms for overnight academic duty.
+                            </div>
+                          </div>
+                        </div>
+
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqAccommodation ? '#1E3A8A' : '#F1F5F9', color: reqAccommodation ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={reqAccommodation}
+                            onChange={(e) => setReqAccommodation(e.target.checked)}
+                          />
+                          <span>{reqAccommodation ? '✓ Lodging Requested' : '+ Require Room Stay'}</span>
+                        </label>
+                      </div>
+
+                      {reqAccommodation ? (
+                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                          <div className="uni-room-grid">
+                            <div
+                              className={`uni-room-card ${roomType === 'Faculty Transit Room' ? 'selected' : ''}`}
+                              onClick={() => setRoomType('Faculty Transit Room')}
+                            >
                               <span className="uni-room-tag">FACULTY TRANSIT</span>
                               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
                                 Faculty Transit Room
                               </div>
                               <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
-                                Single/Twin bed with study desk, fan/cooler or AC, and attached bathroom. Recommended for guest lecturers & examiners.
+                                Single/Twin study room with study desk and attached washroom for visiting examiners & guest professors.
                               </p>
+                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                                {roomType === 'Faculty Transit Room' ? '✓ Selected' : 'Select Room'}
+                              </div>
                             </div>
-                            <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
-                              {roomType === 'Faculty Transit Room' ? '✓ Selected' : 'Click to Select'}
-                            </div>
-                          </div>
 
-                          {/* Room Type 2 */}
-                          <div
-                            className={`uni-room-card ${roomType === 'Hostel Guest Room' ? 'selected' : ''}`}
-                            onClick={() => setRoomType('Hostel Guest Room')}
-                          >
-                            <div>
+                            <div
+                              className={`uni-room-card ${roomType === 'Hostel Guest Room' ? 'selected' : ''}`}
+                              onClick={() => setRoomType('Hostel Guest Room')}
+                            >
                               <span className="uni-room-tag" style={{ background: '#FEF3C7', color: '#92400E' }}>HOSTEL WING</span>
                               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
                                 Hostel Guest Room
                               </div>
                               <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
-                                Located in student hostel guest blocks. Suitable for visiting research scholars and students' parents.
+                                Dedicated visitor rooms located in Boys/Girls Hostel guest wings for student parents & research scholars.
                               </p>
+                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                                {roomType === 'Hostel Guest Room' ? '✓ Selected' : 'Select Room'}
+                              </div>
                             </div>
-                            <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
-                              {roomType === 'Hostel Guest Room' ? '✓ Selected' : 'Click to Select'}
-                            </div>
-                          </div>
 
-                          {/* Room Type 3 */}
-                          <div
-                            className={`uni-room-card ${roomType === 'Common Dormitory Bed' ? 'selected' : ''}`}
-                            onClick={() => setRoomType('Common Dormitory Bed')}
-                          >
-                            <div>
+                            <div
+                              className={`uni-room-card ${roomType === 'Common Dormitory Bed' ? 'selected' : ''}`}
+                              onClick={() => setRoomType('Common Dormitory Bed')}
+                            >
                               <span className="uni-room-tag" style={{ background: '#ECFDF5', color: '#065F46' }}>DORMITORY</span>
                               <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
                                 Common Dormitory Bed
@@ -617,203 +764,262 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                               <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
                                 Shared hall bed with individual locker. Best for student delegations, workshops & university sports events.
                               </p>
+                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                                {roomType === 'Common Dormitory Bed' ? '✓ Selected' : 'Select Room'}
+                              </div>
                             </div>
-                            <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
-                              {roomType === 'Common Dormitory Bed' ? '✓ Selected' : 'Click to Select'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Stay Dates & Count */}
-                        <div className="responsive-form-grid">
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Check-In Date *</label>
-                            <input
-                              type="date"
-                              className="input-text"
-                              value={checkInDate}
-                              onChange={(e) => setCheckInDate(e.target.value)}
-                              required={reqAccommodation}
-                            />
                           </div>
 
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Check-Out Date *</label>
-                            <input
-                              type="date"
-                              className="input-text"
-                              value={checkOutDate}
-                              onChange={(e) => setCheckOutDate(e.target.value)}
-                              required={reqAccommodation}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Number of Guests</label>
-                            <select
-                              className="input-text"
-                              value={guestsCount}
-                              onChange={(e) => setGuestsCount(parseInt(e.target.value, 10))}
-                            >
-                              <option value={1}>1 Person</option>
-                              <option value={2}>2 Persons</option>
-                              <option value={3}>3 Persons</option>
-                              <option value={4}>4+ (Group/Team)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: '0.75rem' }}>
-                          <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>
-                            Special Room Remarks (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            className="input-text"
-                            placeholder="e.g. Ground floor preference for senior professor, late arrival"
-                            value={stayNotes}
-                            onChange={(e) => setStayNotes(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* STEP 3: CAMPUS MESS MEALS */}
-                  <div style={{ marginBottom: '1.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Step 3: Hostel Mess & Canteen Dining
-                      </div>
-                      <label style={{ fontSize: '0.8125rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={reqFood}
-                          onChange={(e) => setReqFood(e.target.checked)}
-                        />
-                        <span>Need Mess Food Coupons</span>
-                      </label>
-                    </div>
-
-                    {reqFood && (
-                      <div className="uni-mess-box">
-                        <div style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '8px' }}>
-                          Daily standard campus mess food (Dal, Sabzi, Roti, Rice, Curd). Choose required meals:
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                          {['Breakfast', 'Lunch', 'Dinner'].map((meal) => (
-                            <label key={meal} className="uni-check-label">
+                          <div className="responsive-form-grid" style={{ marginTop: '1rem' }}>
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Check-In Date *</label>
                               <input
-                                type="checkbox"
-                                checked={meals.includes(meal)}
-                                onChange={() => toggleMeal(meal)}
+                                type="date"
+                                className="input-text"
+                                value={checkInDate}
+                                onChange={(e) => setCheckInDate(e.target.value)}
+                                required={reqAccommodation}
                               />
-                              <span>{meal}</span>
-                            </label>
-                          ))}
-                        </div>
+                            </div>
 
-                        <div className="responsive-form-grid">
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Mess Dietary Preference</label>
-                            <select
-                              className="input-text"
-                              value={dietaryPref}
-                              onChange={(e) => setDietaryPref(e.target.value)}
-                            >
-                              <option value="Vegetarian (Mess Thali)">Vegetarian (Hostel Mess Thali)</option>
-                              <option value="Non-Vegetarian (Mess Thali)">Non-Vegetarian (Egg/Chicken Day)</option>
-                              <option value="Jain Meal (No Onion/Garlic)">Jain Meal (No Onion/Garlic)</option>
-                              <option value="Simple Canteen Snacks">Simple Canteen / Tea-Coffee Only</option>
-                            </select>
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Check-Out Date *</label>
+                              <input
+                                type="date"
+                                className="input-text"
+                                value={checkOutDate}
+                                onChange={(e) => setCheckOutDate(e.target.value)}
+                                required={reqAccommodation}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Number of Guests</label>
+                              <select
+                                className="input-text"
+                                value={guestsCount}
+                                onChange={(e) => setGuestsCount(parseInt(e.target.value, 10))}
+                              >
+                                <option value={1}>1 Person</option>
+                                <option value={2}>2 Persons</option>
+                                <option value={3}>3 Persons</option>
+                                <option value={4}>4+ (Group / Contingent)</option>
+                              </select>
+                            </div>
                           </div>
 
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Dietary Notes (Optional)</label>
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Special Lodging Remarks (Optional)</label>
                             <input
                               type="text"
                               className="input-text"
-                              placeholder="e.g. Diabetic, less spice"
-                              value={foodNotes}
-                              onChange={(e) => setFoodNotes(e.target.value)}
+                              placeholder="e.g. Ground floor preference for senior professor, late check-in"
+                              value={stayNotes}
+                              onChange={(e) => setStayNotes(e.target.value)}
                             />
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* STEP 4: CAMPUS GATE PICKUP (OPTIONAL) */}
-                  <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Step 4: Campus Gate / Station Pickup (Optional)
-                      </div>
-                      <label style={{ fontSize: '0.8125rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={reqTransport}
-                          onChange={(e) => setReqTransport(e.target.checked)}
-                        />
-                        <span>Need Campus Shuttle / Pickup</span>
-                      </label>
+                      ) : (
+                        <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: '#64748B' }}>
+                          ✓ Day visit clearance only — No on-campus lodging required.
+                        </div>
+                      )}
                     </div>
 
-                    {reqTransport && (
-                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px 16px' }}>
-                        <div className="responsive-form-grid">
+                    {/* FACILITY B: HOSTEL MESS DINING */}
+                    <div style={{ border: reqFood ? '1.5px solid #059669' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.25rem', background: reqFood ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.4rem' }}>🍽️</span>
                           <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Pickup Location</label>
-                            <select
-                              className="input-text"
-                              value={pickupLoc}
-                              onChange={(e) => setPickupLoc(e.target.value)}
-                            >
-                              <option value="University Main Gate">University Main Gate</option>
-                              <option value="Railway Station (City)">City Railway Station</option>
-                              <option value="Inter-State Bus Terminal (ISBT)">Inter-State Bus Terminal (ISBT)</option>
-                              <option value="Airport (External Examiner Duty)">Airport (External Examiner Duty)</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Arrival Date & Time</label>
-                            <input
-                              type="datetime-local"
-                              className="input-text"
-                              value={pickupTime}
-                              onChange={(e) => setPickupTime(e.target.value)}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Train / Flight Details (Optional)</label>
-                            <input
-                              type="text"
-                              className="input-text"
-                              placeholder="e.g. Train #12004 or Flight 6E-204"
-                              value={transportNotes}
-                              onChange={(e) => setTransportNotes(e.target.value)}
-                            />
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                              Hostel Mess Dining Meal Passes
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              Freshly prepared vegetarian hostel mess thali in Campus Dining Hall.
+                            </div>
                           </div>
                         </div>
+
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqFood ? '#059669' : '#F1F5F9', color: reqFood ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={reqFood}
+                            onChange={(e) => setReqFood(e.target.checked)}
+                          />
+                          <span>{reqFood ? '✓ Mess Dining Requested' : '+ Require Mess Meals'}</span>
+                        </label>
                       </div>
-                    )}
+
+                      {reqFood ? (
+                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                          <div style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '8px' }}>
+                            Choose required daily mess meals:
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                            {['Breakfast', 'Lunch', 'Dinner'].map((meal) => (
+                              <label key={meal} className="uni-check-label">
+                                <input
+                                  type="checkbox"
+                                  checked={meals.includes(meal)}
+                                  onChange={() => toggleMeal(meal)}
+                                />
+                                <span>{meal}</span>
+                              </label>
+                            ))}
+                          </div>
+
+                          <div className="responsive-form-grid">
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Dietary Preference</label>
+                              <select
+                                className="input-text"
+                                value={dietaryPref}
+                                onChange={(e) => setDietaryPref(e.target.value)}
+                              >
+                                <option value="Vegetarian (Mess Thali)">Vegetarian (Hostel Mess Thali)</option>
+                                <option value="Jain Meal (No Onion/Garlic)">Jain Meal (No Onion/Garlic)</option>
+                                <option value="Faculty Special Thali">Faculty Special Guest Thali</option>
+                                <option value="Simple Canteen Snacks">Simple Canteen / Tea-Coffee Only</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Dietary Remarks (Optional)</label>
+                              <input
+                                type="text"
+                                className="input-text"
+                                placeholder="e.g. Diabetic, less spice"
+                                value={foodNotes}
+                                onChange={(e) => setFoodNotes(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: '#64748B' }}>
+                          ✓ No mess meals requested — Self-arranged / Tea-coffee only.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* FACILITY C: CAMPUS GATE TRANSIT / SHUTTLE */}
+                    <div style={{ border: reqTransport ? '1.5px solid #0284C7' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', background: reqTransport ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '1.4rem' }}>🚗</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                              Campus Gate Shuttle / Local Transit Assistance
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                              University shuttle from Main Security Gate or City Station to academic departments.
+                            </div>
+                          </div>
+                        </div>
+
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqTransport ? '#0284C7' : '#F1F5F9', color: reqTransport ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                          <input
+                            type="checkbox"
+                            checked={reqTransport}
+                            onChange={(e) => setReqTransport(e.target.checked)}
+                          />
+                          <span>{reqTransport ? '✓ Transit Requested' : '+ Require Gate Shuttle'}</span>
+                        </label>
+                      </div>
+
+                      {reqTransport ? (
+                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                          <div className="responsive-form-grid">
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Pickup Point</label>
+                              <select
+                                className="input-text"
+                                value={pickupLoc}
+                                onChange={(e) => setPickupLoc(e.target.value)}
+                              >
+                                <option value="University Main Gate">University Main Security Gate</option>
+                                <option value="Campus Bus Terminal">Campus Bus Terminal</option>
+                                <option value="Railway Station (City)">Ludhiana Railway Station (Examiner Duty)</option>
+                                <option value="Inter-State Bus Terminal (ISBT)">Inter-State Bus Terminal (ISBT)</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Arrival Date & Time</label>
+                              <input
+                                type="datetime-local"
+                                className="input-text"
+                                value={pickupTime}
+                                onChange={(e) => setPickupTime(e.target.value)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Train / Flight / Bus Details</label>
+                              <input
+                                type="text"
+                                className="input-text"
+                                placeholder="e.g. Vande Bharat Exp / Personal Car"
+                                value={transportNotes}
+                                onChange={(e) => setTransportNotes(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: '#64748B' }}>
+                          ✓ Own conveyance — Direct arrival at Department.
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid #E2E8F0', paddingTop: '1.25rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                      Submitted requests are verified by the Department Office and allotted by the Hostel Warden.
+                  {/* =======================================================
+                      PART 3: SUMMARY OVERVIEW & SUBMIT
+                     ======================================================= */}
+                  <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      Application Summary:
                     </div>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: '#1E3A8A', fontWeight: 600 }}>
+                        🏛️ Campus Visit Clearance: Mandatory
+                      </span>
+                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqAccommodation ? '#92400E' : '#64748B' }}>
+                        🛏️ Lodging: {reqAccommodation ? `${roomType} (${guestsCount} Person)` : 'Not Requested'}
+                      </span>
+                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqFood ? '#065F46' : '#64748B' }}>
+                        🍽️ Mess Meals: {reqFood ? meals.join(', ') : 'Not Requested'}
+                      </span>
+                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqTransport ? '#0369A1' : '#64748B' }}>
+                        🚗 Shuttle: {reqTransport ? pickupLoc : 'Own Conveyance'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Submission Buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setPurposeOfVisit('');
+                        setReqAccommodation(false);
+                        setReqFood(false);
+                        setReqTransport(false);
+                      }}
+                    >
+                      Reset Form
+                    </button>
                     <button
                       type="submit"
                       className="btn btn-primary"
                       disabled={submitting}
-                      style={{ padding: '10px 24px', fontSize: '0.95rem' }}
+                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 700 }}
                     >
-                      {submitting ? 'Registering Application...' : 'Submit Application for Campus Stay'}
+                      {submitting ? 'Generating Entry Pass...' : '✓ Generate Campus Visit Pass & Submit Request ➔'}
                     </button>
                   </div>
                 </div>
@@ -822,161 +1028,123 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
           </div>
         )}
 
-        {/* TAB 2: TRACK APPLICATION / CHECK-IN PASS */}
+        {/* =========================================================================
+            TAB 2: TRACK APPLICATION / CHECK-IN PASS
+           ========================================================================= */}
         {activeTab === 'track' && (
           <div className="uni-card">
             <div className="uni-card-header">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
-                Track Campus Stay & Room Allocation
+                Track Campus Entry Pass & Allotment Status
               </h2>
               <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
-                Enter your Reference Code (e.g. <code>REQ-849201</code>) or your registered Email to check room allotment and mess pass status.
+                Enter your alphanumeric reference code (e.g. <code>CTU-VIS-XXXXX</code>) or your registered official email address.
               </p>
             </div>
 
             <div className="uni-card-body">
-              <form onSubmit={handleTrackSubmit} style={{ marginBottom: '1.75rem' }}>
-                <div style={{ display: 'flex', gap: '10px', maxWidth: '580px' }}>
+              <form onSubmit={handleTrackSubmit} style={{ maxWidth: '640px', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
                     className="input-text"
-                    placeholder="Enter Reference Code or Official Email..."
+                    placeholder="Enter Reference Code or Email"
                     value={trackQuery}
                     onChange={(e) => setTrackQuery(e.target.value)}
                     style={{ flex: 1 }}
                   />
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={trackingLoading}
-                    style={{ whiteSpace: 'nowrap' }}
-                  >
-                    {trackingLoading ? 'Searching...' : 'Check Status'}
+                  <button type="submit" className="btn btn-primary" disabled={trackingLoading}>
+                    <SearchIcon size={14} />
+                    <span>{trackingLoading ? 'Searching...' : 'Track Pass'}</span>
                   </button>
                 </div>
+                {trackError && (
+                  <div style={{ color: '#DC2626', fontSize: '0.8125rem', marginTop: '8px' }}>
+                    {trackError}
+                  </div>
+                )}
               </form>
 
-              {trackError && (
+              {trackedRequest && (
                 <div
                   style={{
-                    padding: '12px 16px',
-                    background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    color: '#991B1B',
-                    borderRadius: '6px',
-                    marginBottom: '1rem',
-                    fontSize: '0.875rem',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '1.5rem',
+                    background: '#FFFFFF',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                   }}
                 >
-                  {trackError}
-                </div>
-              )}
-
-              {trackedRequest && (
-                <div style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '1.5rem' }}>
-                  {/* Status Banner */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #E2E8F0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #E2E8F0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
                     <div>
-                      <div style={{ fontSize: '0.6875rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
-                        Reference Code
+                      <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+                        Official Campus Visit Permit
                       </div>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1E3A8A' }}>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E3A8A' }}>
                         {trackedRequest.referenceCode}
                       </div>
                     </div>
 
-                    <div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <span
                         style={{
-                          display: 'inline-block',
                           padding: '6px 14px',
-                          borderRadius: '20px',
+                          borderRadius: '4px',
                           fontSize: '0.8125rem',
                           fontWeight: 700,
-                          textTransform: 'uppercase',
-                          background:
-                            trackedRequest.accommodation?.status === 'allocated'
-                              ? '#ECFDF5'
-                              : trackedRequest.accommodation?.status === 'completed'
-                              ? '#EFF6FF'
-                              : '#FEF3C7',
-                          color:
-                            trackedRequest.accommodation?.status === 'allocated'
-                              ? '#065F46'
-                              : trackedRequest.accommodation?.status === 'completed'
-                              ? '#1E3A8A'
-                              : '#92400E',
+                          background: trackedRequest.accommodation?.status === 'allocated' ? '#ECFDF5' : '#FEF3C7',
+                          color: trackedRequest.accommodation?.status === 'allocated' ? '#065F46' : '#92400E',
                         }}
                       >
-                        {trackedRequest.accommodation?.status === 'allocated'
-                          ? '✓ Room Allotted'
-                          : trackedRequest.accommodation?.status === 'completed'
-                          ? '✓ Stay Completed'
-                          : '🟡 Pending Warden Allocation'}
+                        {trackedRequest.accommodation?.selected
+                          ? `Lodging: ${(trackedRequest.accommodation?.status || 'Pending').toUpperCase()}`
+                          : 'Visit Clearance: Active'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Summary Grid */}
-                  <div className="dept-request-meta-grid" style={{ marginBottom: '1.25rem' }}>
+                  <div className="responsive-form-grid" style={{ marginBottom: '1.25rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Guest Name:</span>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Visitor Name</div>
                       <div style={{ fontWeight: 600, color: '#0F172A' }}>{trackedRequest.guestName}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{trackedRequest.designation || 'Visitor'}</div>
+                      <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>{trackedRequest.designation || 'Visitor'}</div>
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Host Dept / Purpose:</span>
-                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trackedRequest.purposeOfVisit || 'Academic Stay'}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Institution / Home Org</div>
+                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trackedRequest.institution || 'External'}</div>
+                      <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>{trackedRequest.guestEmail}</div>
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Dates:</span>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Allocated Room Number</div>
+                      <div style={{ fontWeight: 700, color: trackedRequest.accommodation?.allocatedRoom ? '#059669' : '#92400E', fontSize: '1.05rem' }}>
+                        {trackedRequest.accommodation?.allocatedRoom || (trackedRequest.accommodation?.selected ? 'Under Allotment' : 'Day Visit (No Room)')}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                        {trackedRequest.accommodation?.roomType || 'Standard'}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Mess Meal Slip</div>
                       <div style={{ fontWeight: 600, color: '#0F172A' }}>
-                        {trackedRequest.accommodation?.checkInDate || 'TBD'} to {trackedRequest.accommodation?.checkOutDate || 'TBD'}
+                        {trackedRequest.food?.selected ? `${trackedRequest.food.mealsRequired?.join(', ')} (${trackedRequest.food.dietaryPreference})` : 'Not Requested'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: '#059669' }}>
+                        {trackedRequest.food?.selected ? 'Eligible for Mess Dining' : ''}
                       </div>
                     </div>
                   </div>
 
-                  {/* Allocation Details */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-                    {/* Room Box */}
-                    <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.875rem', color: '#1E3A8A', marginBottom: '6px' }}>
-                        <BedIcon size={16} />
-                        <span>Room Allocation</span>
-                      </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#475569' }}>
-                        Type: <strong>{trackedRequest.accommodation?.roomType || 'Standard'}</strong>
-                      </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 800, color: trackedRequest.accommodation?.allocatedRoom ? '#059669' : '#D97706', marginTop: '6px' }}>
-                        {trackedRequest.accommodation?.allocatedRoom
-                          ? `Allotted: ${trackedRequest.accommodation.allocatedRoom}`
-                          : 'Under Review by Hostel Caretaker'}
-                      </div>
-                      {trackedRequest.accommodation?.adminNotes && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-                          Note: {trackedRequest.accommodation.adminNotes}
-                        </div>
-                      )}
-                    </div>
+                  <div style={{ background: '#F8FAFC', padding: '10px 14px', borderRadius: '6px', fontSize: '0.8125rem', color: '#475569' }}>
+                    <strong>Official Purpose:</strong> {trackedRequest.purposeOfVisit || 'Campus Visit & Academic Duty'}
+                  </div>
 
-                    {/* Mess Box */}
-                    <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.875rem', color: '#059669', marginBottom: '6px' }}>
-                        <UtensilsIcon size={16} />
-                        <span>Hostel Mess Pass</span>
-                      </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#475569' }}>
-                        Pref: <strong>{trackedRequest.food?.dietaryPreference || 'Mess Food'}</strong>
-                      </div>
-                      <div style={{ fontSize: '0.8125rem', color: '#475569', marginTop: '4px' }}>
-                        Meals: {(trackedRequest.food?.mealsRequired || ['Breakfast', 'Lunch', 'Dinner']).join(', ')}
-                      </div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: trackedRequest.food?.cateringStatus === 'arranged' ? '#059669' : '#D97706', marginTop: '6px' }}>
-                        {trackedRequest.food?.cateringStatus === 'arranged' ? '✓ Mess Pass Active' : '🟡 Mess Slip Pending'}
-                      </div>
-                    </div>
+                  <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => window.print()}>
+                      Print Gate Pass
+                    </button>
                   </div>
                 </div>
               )}
@@ -984,57 +1152,90 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
           </div>
         )}
 
-        {/* TAB 3: HOSTEL & MESS GUIDELINES */}
+        {/* =========================================================================
+            TAB 3: HOSTEL & MESS GUIDELINES
+           ========================================================================= */}
         {activeTab === 'guidelines' && (
           <div className="uni-card">
             <div className="uni-card-header">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
-                University Hostel & Transit Facility Guidelines
+                CT University • Campus Visitor & Hostel Guidelines
               </h2>
               <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
-                Essential rules, mess timings, and contact numbers for campus visitors and guests.
+                Please review the institutional transit lodging, mess schedule, and security check-in protocols.
               </p>
             </div>
 
-            <div className="uni-card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1E3A8A', marginBottom: '8px' }}>
-                  🕒 Check-In & Check-Out Timings
-                </h3>
-                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#475569', lineHeight: '1.7' }}>
-                  <li><strong>Standard Check-In:</strong> 12:00 PM onwards</li>
-                  <li><strong>Standard Check-Out:</strong> 11:00 AM</li>
-                  <li>Early check-in is subject to room availability and prior warden approval.</li>
-                  <li>Please carry a valid Institutional / Government Photo ID for campus gate entry.</li>
-                </ul>
+            <div className="uni-card-body">
+              <div className="responsive-form-grid" style={{ marginBottom: '1.5rem' }}>
+                {/* Guideline 1 */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🪪</span>
+                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Gate Check-In & Photo ID</strong>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                    All external visitors must carry a valid Government-issued Photo ID (Aadhaar / Voter ID / Passport / Institutional Faculty ID) and present their Reference Code at the Main Security Gate.
+                  </p>
+                </div>
+
+                {/* Guideline 2 */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🚪</span>
+                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Gate Curfew & Check-In Timings</strong>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                    Standard Check-in is from 12:00 PM onwards, and Check-out is by 11:00 AM. In accordance with university campus security, main hostel gates close at 10:00 PM strictly. Late arrivals must inform the Caretaker Desk in advance.
+                  </p>
+                </div>
+
+                {/* Guideline 3 */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🍽️</span>
+                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Hostel Mess Meal Timings</strong>
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.6' }}>
+                    <div>• <strong>Breakfast:</strong> 07:30 AM – 09:15 AM</div>
+                    <div>• <strong>Lunch:</strong> 12:15 PM – 02:00 PM</div>
+                    <div>• <strong>Dinner:</strong> 07:30 PM – 09:15 PM</div>
+                    <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#64748B' }}>
+                      Standard pure vegetarian thali served. For special dietary needs, kindly inform the mess supervisor.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guideline 4 */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🚭</span>
+                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Campus Decorum & Prohibitions</strong>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
+                    CT University maintains a strict zero-tolerance policy against smoking, alcohol, and narcotic substances on campus premises. Please maintain academic decorum and respect hostel quiet hours after 10:00 PM.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#059669', marginBottom: '8px' }}>
-                  🍽️ Central Mess Timings
-                </h3>
-                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#475569', lineHeight: '1.7' }}>
-                  <li><strong>Breakfast:</strong> 07:30 AM – 09:30 AM</li>
-                  <li><strong>Lunch:</strong> 12:30 PM – 02:30 PM</li>
-                  <li><strong>Evening Tea:</strong> 05:00 PM – 06:00 PM</li>
-                  <li><strong>Dinner:</strong> 07:30 PM – 09:30 PM</li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
-                  📞 Caretaker & Helpdesk Contacts
-                </h3>
-                <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.875rem', color: '#475569', lineHeight: '1.7' }}>
-                  <li>🏢 <strong>Faculty Transit Quarters Desk:</strong> Ext. 1042 / +91 (0) 123-456780</li>
-                  <li>🏢 <strong>Hostel Guest Wing Warden Office:</strong> Ext. 2011 / +91 (0) 123-456781</li>
-                  <li>🚗 <strong>Campus Transport Pool:</strong> Ext. 3004</li>
-                  <li>✉️ <strong>Official Email:</strong> campuslodging@university.edu</li>
-                </ul>
+              {/* Contact Helpdesk Box */}
+              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#1E3A8A', fontSize: '0.9rem' }}>
+                    Hostel Warden & Caretaker Allotment Helpdesk
+                  </div>
+                  <div style={{ fontSize: '0.8125rem', color: '#1E40AF', marginTop: '2px' }}>
+                    For urgent room verification or night transit inquiries, contact the Facility Control Room.
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E3A8A' }}>
+                  📞 +91 161 520 2222 / 520 2200
+                </div>
               </div>
             </div>
           </div>
         )}
+
       </main>
     </div>
   );

@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '../types';
 import {
-  MenuIcon,
   BedIcon,
   ShieldIcon,
   LockIcon,
@@ -12,13 +11,11 @@ import {
 interface MainHeaderProps {
   currentUser: User | null;
   onLogout: () => void;
-  onToggleSidebar: () => void;
 }
 
 export const MainHeader: React.FC<MainHeaderProps> = ({
   currentUser,
   onLogout,
-  onToggleSidebar,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,22 +29,12 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
 
   return (
     <header className="portal-topbar">
-      {/* Left: Hamburger & Brand */}
+      {/* Left: Brand Crest & Institutional Identity */}
       <div className="portal-topbar-left">
-        <button
-          type="button"
-          className="portal-hamburger-btn"
-          onClick={onToggleSidebar}
-          title="Open Navigation Menu (Slide)"
-          aria-label="Toggle navigation drawer"
-        >
-          <MenuIcon size={20} />
-        </button>
-
         <a href="/" className="portal-brand-link">
           <div className="portal-brand-crest">🏛️</div>
           <div className="portal-brand-text">
-            <span className="portal-brand-name">CT University • Campus Lodging & Mess Portal</span>
+            <span className="portal-brand-name">CT University • Campus Visitor & Entry Portal</span>
             <span className="portal-brand-sub">Department of Computer Science & Engineering</span>
           </div>
         </a>
@@ -83,26 +70,18 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
               className={`portal-nav-pill ${currentPath === '/' ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
-              <span>📋 Guest Application Form (Visitor Intake)</span>
+              <span>📋 Visitor Entry Form</span>
             </button>
           </>
         ) : (
           <>
             <button
               type="button"
-              className={`portal-nav-pill ${currentPath === '/' ? 'active' : ''}`}
-              onClick={() => navigate('/')}
-            >
-              <span>🛏️ Apply for Campus Stay</span>
-            </button>
-
-            <button
-              type="button"
               className="portal-nav-pill"
               onClick={() => navigate('/?tab=track')}
             >
               <SearchIcon size={14} />
-              <span>Track Application</span>
+              <span>Track Entry Pass</span>
             </button>
 
             <button
@@ -110,7 +89,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
               className="portal-nav-pill"
               onClick={() => navigate('/?tab=guidelines')}
             >
-              <span>🕒 Guidelines & Mess Rules</span>
+              <span>🕒 Campus Visitor Guidelines</span>
             </button>
           </>
         )}
@@ -150,7 +129,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem' }}
           >
             <LockIcon size={13} />
-            <span>Staff & Admin Login</span>
+            <span>Faculty & Staff Login</span>
           </button>
         )}
       </div>

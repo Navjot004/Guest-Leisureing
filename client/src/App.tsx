@@ -6,7 +6,6 @@ import {
   Navigate,
   useNavigate,
 } from 'react-router-dom';
-import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
@@ -91,29 +90,18 @@ const AuthLayout: React.FC<{
 
 import { MainHeader } from './components/MainHeader';
 
-// Unified Portal Layout with Top Header & Slide Drawer on ALL pages
+// Unified Portal Layout with Clean Institutional Top Header
 const PortalLayout: React.FC<{
   currentUser: User | null;
   onLogout: () => void;
   children: React.ReactNode;
 }> = ({ currentUser, onLogout, children }) => {
-  const [slideOpen, setSlideOpen] = useState(false);
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--canvas)' }}>
-      {/* Unified Professional Top Header on all pages */}
+      {/* Institutional Top Header */}
       <MainHeader
         currentUser={currentUser}
         onLogout={onLogout}
-        onToggleSidebar={() => setSlideOpen((prev) => !prev)}
-      />
-
-      {/* Slide Navigation Drawer */}
-      <Sidebar
-        currentUser={currentUser}
-        onLogout={onLogout}
-        isOpen={slideOpen}
-        onClose={() => setSlideOpen(false)}
       />
 
       {/* Main View Area */}
