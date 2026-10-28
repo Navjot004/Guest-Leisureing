@@ -3,15 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '../types';
 import {
   RefreshIcon,
-  UsersIcon,
-  BriefcaseIcon,
   SearchIcon,
   FileSpreadsheetIcon,
   ArrowLeftIcon,
   EditIcon,
   TrashIcon,
   CloseIcon,
-  ShieldIcon,
 } from '../components/Icons';
 import { VerifiedStaffTab } from '../components/VerifiedStaffTab';
 import { ManageStaffTab } from '../components/ManageStaffTab';
@@ -354,60 +351,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       {feedback && (
         <div className={`callout callout-${feedback.type}`}>
           {feedback.text}
-        </div>
-      )}
-
-      {/* 3 Main Tabs: Visitor Clearance, Staff Users, Guest Users */}
-      {!isViewingVerifiedRoster && !isViewingManageStaff && !isViewingDepartments && (
-        <div
-          className="segmented-track"
-          style={{
-            width: 'fit-content',
-            minWidth: '460px',
-            maxWidth: '100%',
-            marginBottom: '1.25rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          {/* Tab 1: Visitor Clearance & Approvals */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingClearance ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin');
-              setSearchTerm('');
-            }}
-            style={{ fontWeight: 700 }}
-          >
-            <ShieldIcon size={14} color={isViewingClearance ? '#FFFFFF' : '#1E3A8A'} />
-            <span>🏛️ Visitor Approvals Desk</span>
-          </button>
-
-          {/* Tab 2: Staff Users */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingStaffUsers ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin/staff');
-              setSearchTerm('');
-            }}
-          >
-            <BriefcaseIcon size={14} />
-            <span>Staff Users ({staffUsers.length})</span>
-          </button>
-
-          {/* Tab 3: Guest Users */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingGuestUsers ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin/guests');
-              setSearchTerm('');
-            }}
-          >
-            <UsersIcon size={14} />
-            <span>Guest Users ({guestUsers.length})</span>
-          </button>
         </div>
       )}
 
