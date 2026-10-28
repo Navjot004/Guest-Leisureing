@@ -42,11 +42,15 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   // - /super-admin/verified-staff -> Verified Staff Roster
   // - /super-admin/guests -> Guest Users
   // - /super-admin or /super-admin/staff -> Staff Users
-  const isViewingClearance = location.pathname.includes('/clearance') || location.pathname.includes('/visitor-clearance') || location.pathname.includes('/requests');
   const isViewingDepartments = location.pathname.includes('/departments');
   const isViewingManageStaff = location.pathname.includes('/manage-staff');
   const isViewingVerifiedRoster = location.pathname.includes('/verified-staff');
-  const activeTab: 'staff' | 'guest' = location.pathname.includes('/guests') ? 'guest' : 'staff';
+  const isViewingGuestUsers = location.pathname.includes('/guests');
+  const isViewingStaffUsers = location.pathname.includes('/staff') || location.pathname.includes('/users');
+
+  // Default view when visiting /super-admin is the Visitor Approvals & Clearance Desk!
+  const isViewingClearance = !isViewingDepartments && !isViewingManageStaff && !isViewingVerifiedRoster && !isViewingGuestUsers && !isViewingStaffUsers;
+  const activeTab: 'staff' | 'guest' = isViewingGuestUsers ? 'guest' : 'staff';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -370,21 +374,21 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
             type="button"
             className={`segmented-segment ${isViewingClearance ? 'active' : ''}`}
             onClick={() => {
-              navigate('/super-admin/clearance');
+              navigate('/super-admin');
               setSearchTerm('');
             }}
-            style={{ fontWeight: 600 }}
+            style={{ fontWeight: 700 }}
           >
             <ShieldIcon size={14} color={isViewingClearance ? '#FFFFFF' : '#1E3A8A'} />
-            <span>Visitor Clearance Desk</span>
+            <span>🏛️ Visitor Approvals Desk</span>
           </button>
 
           {/* Tab 2: Staff Users */}
           <button
             type="button"
-            className={`segmented-segment ${!isViewingClearance && activeTab === 'staff' ? 'active' : ''}`}
+            className={`segmented-segment ${isViewingStaffUsers ? 'active' : ''}`}
             onClick={() => {
-              navigate('/super-admin');
+              navigate('/super-admin/staff');
               setSearchTerm('');
             }}
           >
@@ -395,7 +399,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
           {/* Tab 3: Guest Users */}
           <button
             type="button"
-            className={`segmented-segment ${!isViewingClearance && activeTab === 'guest' ? 'active' : ''}`}
+            className={`segmented-segment ${isViewingGuestUsers ? 'active' : ''}`}
             onClick={() => {
               navigate('/super-admin/guests');
               setSearchTerm('');

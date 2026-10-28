@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '../types';
 import {
-  BedIcon,
   ShieldIcon,
   LockIcon,
   SearchIcon,
@@ -44,24 +43,45 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
       <nav className="portal-header-nav">
         {currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
           <>
-            <button
-              type="button"
-              className={`portal-nav-pill ${currentPath.startsWith('/dept-admin') ? 'active' : ''}`}
-              onClick={() => navigate('/dept-admin')}
-            >
-              <BedIcon size={14} />
-              <span>🏢 Caretaker Allotment Desk</span>
-            </button>
+            {isSuperAdmin ? (
+              <>
+                <button
+                  type="button"
+                  className={`portal-nav-pill ${currentPath === '/super-admin' || currentPath.includes('/clearance') ? 'active' : ''}`}
+                  onClick={() => navigate('/super-admin')}
+                  style={{ color: '#1E3A8A', fontWeight: 700 }}
+                >
+                  <ShieldIcon size={14} />
+                  <span>🏛️ Visitor Approvals Desk</span>
+                </button>
 
-            {isSuperAdmin && (
+                <button
+                  type="button"
+                  className={`portal-nav-pill ${currentPath.includes('/staff') || currentPath.includes('/guests') || currentPath.includes('/departments') || currentPath.includes('/verified-staff') ? 'active' : ''}`}
+                  onClick={() => navigate('/super-admin/staff')}
+                >
+                  <span>⚙️ Staff & Users Console</span>
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                className={`portal-nav-pill ${currentPath.includes('/super-admin') ? 'active' : ''}`}
-                onClick={() => navigate('/super-admin')}
-                style={{ color: '#1E3A8A', fontWeight: 600 }}
+                className={`portal-nav-pill ${currentPath.startsWith('/dept-admin') ? 'active' : ''}`}
+                onClick={() => {
+                  const dept = (currentUser.adminDepartment || currentUser.department || '').toLowerCase();
+                  if (dept.includes('cater') || dept.includes('food')) navigate('/dept-admin/catering');
+                  else if (dept.includes('transport')) navigate('/dept-admin/transport');
+                  else navigate('/dept-admin/accommodation');
+                }}
               >
-                <ShieldIcon size={14} />
-                <span>Super Admin Console</span>
+                <span>
+                  {(() => {
+                    const dept = (currentUser.adminDepartment || currentUser.department || '').toLowerCase();
+                    if (dept.includes('cater') || dept.includes('food')) return '🍽️ Mess Dining Desk';
+                    if (dept.includes('transport')) return '🚗 Campus Transit Desk';
+                    return '🏠 Hostel Allotment Desk';
+                  })()}
+                </span>
               </button>
             )}
 

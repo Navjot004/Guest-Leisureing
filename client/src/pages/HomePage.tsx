@@ -370,22 +370,38 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
               </div>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ background: '#1E3A8A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
-                onClick={() => navigate('/dept-admin/accommodation')}
-              >
-                🏢 Open Caretaker Allotment Desk ➔
-              </button>
-              {(currentUser?.role === 'superadmin' || currentUser?.isSuperAdmin || currentUser?.id === '10001') && (
+              {(currentUser?.role === 'superadmin' || currentUser?.isSuperAdmin || currentUser?.id === '10001') ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ background: '#1E3A8A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
+                    onClick={() => navigate('/super-admin')}
+                  >
+                    🏛️ Open Visitor Approvals Desk ➔
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ background: '#0F172A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
+                    onClick={() => navigate('/super-admin/staff')}
+                  >
+                    ⚙️ Staff & Users Console ➔
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ background: '#0F172A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
-                  onClick={() => navigate('/super-admin')}
+                  className="btn btn-primary"
+                  style={{ background: '#1E3A8A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
+                  onClick={() => {
+                    const dept = (currentUser?.adminDepartment || currentUser?.department || '').toLowerCase();
+                    if (dept.includes('cater') || dept.includes('food')) navigate('/dept-admin/catering');
+                    else if (dept.includes('transport')) navigate('/dept-admin/transport');
+                    else navigate('/dept-admin/accommodation');
+                  }}
                 >
-                  🏛️ Super Admin Console ➔
+                  🏢 Open Department Allotment Desk ➔
                 </button>
               )}
             </div>
