@@ -269,69 +269,180 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   }
 
   return (
-    <div className="canvas-wrapper">
-      {/* Top Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.25rem',
-          flexWrap: 'wrap',
-          gap: '12px',
-        }}
-      >
+    <div className="admin-layout-wrapper">
+      {/* 1. Left Administrative Sidebar with Navbar Tabs */}
+      <aside className="admin-sidebar">
         <div>
-          <h1 className="headline-lg">
-            {isViewingClearance
-              ? 'Visitor Clearance & Approvals'
-              : isViewingDepartments
-              ? 'Departments'
-              : isViewingManageStaff
-              ? 'Manage Staff'
-              : isViewingVerifiedRoster
-              ? 'Verified Staff List'
-              : 'Users Management'}
-          </h1>
-          <p className="body-sm">
-            {isViewingClearance
-              ? 'Dean Office Gatekeeper: Review external visitors, grant campus visit clearances, and dispatch requirements to Hostel, Mess, and Transit Caretaker Desks.'
-              : isViewingDepartments
-              ? 'Academic faculties, divisions, and departmental governance workspace'
-              : isViewingManageStaff
-              ? 'Promote university staff to Department Administrators, assign departmental governance, and manage operational privileges'
-              : isViewingVerifiedRoster
-              ? 'Upload and manage pre-authorized faculty and staff roster (Excel / CSV)'
-              : 'MongoDB Atlas user records partitioned into Staff Users and Guest Users'}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {(isViewingManageStaff || isViewingDepartments) && (
+          <div className="admin-sidebar-section-title">Institutional Desks</div>
+          <nav className="admin-sidebar-nav">
+            {/* Tab 1: Visitor Approvals Desk */}
             <button
               type="button"
-              className="btn btn-sm btn-secondary"
-              onClick={() => navigate('/super-admin')}
-              title="Return to Users"
+              className={`admin-sidebar-tab ${isViewingClearance ? 'active' : ''}`}
+              onClick={() => {
+                navigate('/super-admin');
+                setSearchTerm('');
+              }}
             >
-              <ArrowLeftIcon size={14} />
-              <span>Back to Users</span>
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">
+                  <ShieldIcon size={14} color={isViewingClearance ? '#FFFFFF' : 'var(--primary)'} />
+                </span>
+                <span>Visitor Approvals Desk</span>
+              </div>
+              <span className="admin-sidebar-tab-badge">Queue</span>
             </button>
-          )}
 
-          {/* IN STAFF USERS: TOGGLE BETWEEN VERIFIED STAFF LIST BUTTON AND BACK BUTTON */}
-          {!isViewingManageStaff && !isViewingDepartments && !isViewingClearance && activeTab === 'staff' && (
-            isViewingVerifiedRoster ? (
+            {/* Tab 2: Staff Users */}
+            <button
+              type="button"
+              className={`admin-sidebar-tab ${isViewingStaffUsers && !isViewingVerifiedRoster && !isViewingManageStaff && !isViewingDepartments ? 'active' : ''}`}
+              onClick={() => {
+                navigate('/super-admin/staff');
+                setSearchTerm('');
+              }}
+            >
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">
+                  <BriefcaseIcon size={14} color={isViewingStaffUsers && !isViewingVerifiedRoster && !isViewingManageStaff && !isViewingDepartments ? '#FFFFFF' : 'var(--text-muted)'} />
+                </span>
+                <span>Staff Users</span>
+              </div>
+              <span className="admin-sidebar-tab-badge">{staffUsers.length}</span>
+            </button>
+
+            {/* Tab 3: Guest Users */}
+            <button
+              type="button"
+              className={`admin-sidebar-tab ${isViewingGuestUsers ? 'active' : ''}`}
+              onClick={() => {
+                navigate('/super-admin/guests');
+                setSearchTerm('');
+              }}
+            >
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">
+                  <UsersIcon size={14} color={isViewingGuestUsers ? '#FFFFFF' : 'var(--text-muted)'} />
+                </span>
+                <span>Guest Users</span>
+              </div>
+              <span className="admin-sidebar-tab-badge">{guestUsers.length}</span>
+            </button>
+          </nav>
+
+          <div className="admin-sidebar-divider" />
+
+          <div className="admin-sidebar-section-title">Management & Tools</div>
+          <nav className="admin-sidebar-nav">
+            <button
+              type="button"
+              className={`admin-sidebar-tab ${isViewingVerifiedRoster ? 'active' : ''}`}
+              onClick={() => navigate('/super-admin/verified-staff')}
+            >
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">
+                  <FileSpreadsheetIcon size={14} color={isViewingVerifiedRoster ? '#FFFFFF' : 'var(--text-muted)'} />
+                </span>
+                <span>Verified Staff List</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`admin-sidebar-tab ${isViewingManageStaff ? 'active' : ''}`}
+              onClick={() => navigate('/super-admin/manage-staff')}
+            >
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">⚙️</span>
+                <span>Promote Staff</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className={`admin-sidebar-tab ${isViewingDepartments ? 'active' : ''}`}
+              onClick={() => navigate('/super-admin/departments')}
+            >
+              <div className="admin-sidebar-tab-left">
+                <span className="admin-sidebar-tab-icon">🏢</span>
+                <span>Departments</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Sidebar Footer: Super Administrator Profile Card */}
+        <div className="admin-sidebar-footer">
+          <div className="admin-sidebar-user-card">
+            <div style={{ fontSize: '1.25rem' }}>🏛️</div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                Super Administrator
+              </div>
+              <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                Dean Office Gatekeeper • ID: 10001
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* 2. Right Dedicated Page Viewport */}
+      <main className="admin-content-viewport">
+        {/* Dynamic Page Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div>
+            <h1 className="headline-lg">
+              {isViewingClearance
+                ? 'Visitor Clearance & Approvals'
+                : isViewingDepartments
+                ? 'Departments Governance'
+                : isViewingManageStaff
+                ? 'Manage Staff Privileges'
+                : isViewingVerifiedRoster
+                ? 'Verified Faculty & Staff Roster'
+                : isViewingGuestUsers
+                ? 'Guest Users Directory'
+                : 'Staff Users Management'}
+            </h1>
+            <p className="body-sm">
+              {isViewingClearance
+                ? 'Dean Office Gatekeeper: Review external visitors, grant campus visit clearances, and dispatch requirements to Hostel, Mess, and Transit Caretaker Desks.'
+                : isViewingDepartments
+                ? 'Academic faculties, divisions, and departmental governance workspace.'
+                : isViewingManageStaff
+                ? 'Promote university staff to Department Administrators, assign departmental governance, and manage operational privileges.'
+                : isViewingVerifiedRoster
+                ? 'Upload and manage pre-authorized faculty and staff roster (Excel / CSV).'
+                : isViewingGuestUsers
+                ? 'Self-registered guest profiles, parents, external examiners, and conference visitors.'
+                : 'Authorized university faculty, department caretakers, and operational staff accounts.'}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {(isViewingManageStaff || isViewingDepartments || isViewingVerifiedRoster) && (
               <button
                 type="button"
                 className="btn btn-sm btn-secondary"
-                onClick={() => navigate('/super-admin')}
+                onClick={() => navigate('/super-admin/staff')}
                 title="Return to Staff Users"
               >
                 <ArrowLeftIcon size={14} />
                 <span>Back to Staff Users</span>
               </button>
-            ) : (
+            )}
+
+            {isViewingStaffUsers && !isViewingVerifiedRoster && (
               <button
                 type="button"
                 className="btn btn-sm btn-secondary"
@@ -341,77 +452,22 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                 <FileSpreadsheetIcon size={14} />
                 <span>Verified Staff List</span>
               </button>
-            )
-          )}
+            )}
 
-          <button className="btn btn-sm btn-secondary" onClick={loadData}>
-            <RefreshIcon size={14} />
-            <span>Refresh</span>
-          </button>
+            <button className="btn btn-sm btn-secondary" onClick={loadData}>
+              <RefreshIcon size={14} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      {feedback && (
-        <div className={`callout callout-${feedback.type}`}>
-          {feedback.text}
-        </div>
-      )}
+        {feedback && (
+          <div className={`callout callout-${feedback.type}`} style={{ marginBottom: '1.25rem' }}>
+            {feedback.text}
+          </div>
+        )}
 
-      {/* 3 Main Tabs: Visitor Clearance, Staff Users, Guest Users */}
-      {!isViewingVerifiedRoster && !isViewingManageStaff && !isViewingDepartments && (
-        <div
-          className="segmented-track"
-          style={{
-            width: 'fit-content',
-            minWidth: '460px',
-            maxWidth: '100%',
-            marginBottom: '1.25rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          {/* Tab 1: Visitor Clearance & Approvals */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingClearance ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin');
-              setSearchTerm('');
-            }}
-            style={{ fontWeight: 700 }}
-          >
-            <ShieldIcon size={14} color={isViewingClearance ? '#FFFFFF' : '#1E3A8A'} />
-            <span>🏛️ Visitor Approvals Desk</span>
-          </button>
-
-          {/* Tab 2: Staff Users */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingStaffUsers ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin/staff');
-              setSearchTerm('');
-            }}
-          >
-            <BriefcaseIcon size={14} />
-            <span>Staff Users ({staffUsers.length})</span>
-          </button>
-
-          {/* Tab 3: Guest Users */}
-          <button
-            type="button"
-            className={`segmented-segment ${isViewingGuestUsers ? 'active' : ''}`}
-            onClick={() => {
-              navigate('/super-admin/guests');
-              setSearchTerm('');
-            }}
-          >
-            <UsersIcon size={14} />
-            <span>Guest Users ({guestUsers.length})</span>
-          </button>
-        </div>
-      )}
-
-      {/* VIEW CONTENT */}
+        {/* VIEW CONTENT */}
       {isViewingClearance ? (
         <VisitorClearanceTab token={token} />
       ) : isViewingDepartments ? (
@@ -598,6 +654,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
           </div>
         </div>
       )}
+      </main>
 
       {/* =========================================================================
           EDIT USER INFORMATION MODAL
