@@ -80,9 +80,33 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   const loadData = async () => {
     try {
       setLoading(true);
+      setFeedback(null);
+
+      if (!token) {
+        throw new Error('Authentication token missing. Please sign in again as Super Administrator.');
+      }
+
       const usersRes = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!usersRes.ok) {
+        let errorMsg = `Server error (${usersRes.status})`;
+        try {
+          const errData = await usersRes.json();
+          if (errData && errData.message) {
+            errorMsg = errData.message;
+          }
+        } catch (_) {
+          if (usersRes.status === 502) {
+            errorMsg = 'Backend server is temporarily reconnecting. Please click Refresh.';
+          } else if (usersRes.status === 401 || usersRes.status === 403) {
+            errorMsg = 'Session expired or unauthorized. Please sign in again as Super Administrator.';
+          }
+        }
+        throw new Error(errorMsg);
+      }
+
       const usersData = await usersRes.json();
       if (usersData.success) {
         setUsers(usersData.users);

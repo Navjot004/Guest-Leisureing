@@ -120,7 +120,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
       <div className="portal-topbar-right">
         {currentUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ textAlign: 'right' }}>
+            <div className="portal-user-meta" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
                 {currentUser.name}
               </div>

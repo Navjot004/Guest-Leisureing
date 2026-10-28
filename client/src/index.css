@@ -2134,3 +2134,55 @@ select.input-text {
     display: none;
   }
 }
+
+@media (max-width: 640px) {
+  .portal-topbar {
+    padding: 0 0.75rem;
+    height: 56px;
+    gap: 8px;
+  }
+
+  .portal-brand-crest {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .portal-brand-sub {
+    display: none !important;
+  }
+
+  .portal-brand-name {
+    font-size: 0.8125rem !important;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+  }
+
+  .portal-user-meta {
+    display: none !important;
+  }
+
+  .portal-topbar-right {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .portal-topbar-right .btn {
+    padding: 4px 10px !important;
+    font-size: 0.75rem !important;
+    height: 30px !important;
+  }
+
+  .canvas-wrapper {
+    padding: 1rem 0.75rem !important;
+  }
+
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -72,7 +72,7 @@ async function startServer() {
     });
     console.log(`✅ MongoDB Atlas Connected! Active DB: ${mongoose.connection.name}`);
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n======================================================`);
       console.log(`🏨 Guest Leisureing Luxury Platform is LIVE!`);
       console.log(`🌐 Server URL:        http://localhost:${PORT}`);
