@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../types';
 import {
   LockIcon,
@@ -16,14 +16,6 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   onLogout,
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const isSuperAdmin =
-    currentUser?.role === 'superadmin' ||
-    currentUser?.id === '10001' ||
-    currentUser?.isSuperAdmin === true;
-
-  const currentPath = location.pathname;
 
   return (
     <header className="portal-topbar">
@@ -38,39 +30,9 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
         </a>
       </div>
 
-      {/* Middle: Role-Aware Quick Links on Desktop (Clean for Super Admin) */}
+      {/* Middle: Clean Header for Logged-In Users; Public Links for Visitors */}
       <nav className="portal-header-nav">
-        {isSuperAdmin ? null : currentUser && (currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
-          <>
-            <button
-              type="button"
-              className={`portal-nav-pill ${currentPath.startsWith('/dept-admin') ? 'active' : ''}`}
-              onClick={() => {
-                const dept = (currentUser.adminDepartment || currentUser.department || '').toLowerCase();
-                if (dept.includes('cater') || dept.includes('food')) navigate('/dept-admin/catering');
-                else if (dept.includes('transport')) navigate('/dept-admin/transport');
-                else navigate('/dept-admin/accommodation');
-              }}
-            >
-              <span>
-                {(() => {
-                  const dept = (currentUser.adminDepartment || currentUser.department || '').toLowerCase();
-                  if (dept.includes('cater') || dept.includes('food')) return '🍽️ Mess Dining Desk';
-                  if (dept.includes('transport')) return '🚗 Campus Transit Desk';
-                  return '🏠 Hostel Allotment Desk';
-                })()}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className={`portal-nav-pill ${currentPath === '/' ? 'active' : ''}`}
-              onClick={() => navigate('/')}
-            >
-              <span>📋 Visitor Entry Form</span>
-            </button>
-          </>
-        ) : (
+        {currentUser ? null : (
           <>
             <button
               type="button"
