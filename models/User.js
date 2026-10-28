@@ -61,6 +61,10 @@ const userSchema = new mongoose.Schema({
     type: [String],
     default: ['Wellness & Spa', 'Fine Dining'],
   },
+  mustChangePassword: {
+    type: Boolean,
+    default: false,
+  },
   lastLogin: {
     type: Date,
     default: null,

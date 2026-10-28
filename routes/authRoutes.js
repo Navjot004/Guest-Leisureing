@@ -94,6 +94,7 @@ router.post('/login', async (req, res) => {
       isDeptAdmin: Boolean(user.isDeptAdmin || user.role === 'dept_admin'),
       adminDepartment: user.adminDepartment || user.department || '',
       preferences: user.preferences,
+      mustChangePassword: Boolean(user.mustChangePassword),
       isSuperAdmin: false,
     };
 
@@ -116,10 +117,11 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   POST /api/auth/register
-// @desc    Register a new Guest user into MongoDB Atlas
+// @route   POST /api/auth/register
+// @desc    Register a new Guest user into MongoDB Atlas (Staff is provisioned by Super Admin only)
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, role, staffId, preferences } = req.body;
+    const { name, email, password, phone, preferences } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ 
@@ -130,8 +132,6 @@ router.post('/register', async (req, res) => {
 
     const cleanEmail = email.toLowerCase().trim();
     const cleanName = name.trim();
-    const cleanStaffId = (staffId || '').toString().trim();
-    const targetRole = role === 'staff' ? 'staff' : 'guest';
 
     // Prevent registering with superadmin credentials
     if (cleanEmail === 'superadmin@guestleisureing.com' || cleanEmail === SUPER_ADMIN_ID) {
@@ -158,44 +158,18 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // VERIFIED STAFF RESTRICTION CHECK
-    let matchedVerifiedStaff = null;
-    if (targetRole === 'staff') {
-      const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      
-      const queryConditions = [
-        { email: cleanEmail },
-        { name: { $regex: new RegExp(`^${escapedName}$`, 'i') } },
-      ];
-
-      if (cleanStaffId) {
-        queryConditions.push({ staffId: cleanStaffId });
-      }
-
-      matchedVerifiedStaff = await VerifiedStaff.findOne({ $or: queryConditions });
-
-      if (!matchedVerifiedStaff) {
-        return res.status(403).json({
-          success: false,
-          message: `Staff registration denied: Your name ("${cleanName}") or email ("${cleanEmail}") is not in the Verified Staff List uploaded by the Super Admin. Please contact administration.`,
-        });
-      }
-    }
-
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user in MongoDB
+    // Create Guest user in MongoDB
     const newUser = new User({
       name: cleanName,
       email: cleanEmail,
       password: hashedPassword,
-      phone: phone ? phone.trim() : (matchedVerifiedStaff ? matchedVerifiedStaff.phone : ''),
-      staffId: cleanStaffId || (matchedVerifiedStaff ? matchedVerifiedStaff.staffId : ''),
-      department: matchedVerifiedStaff ? matchedVerifiedStaff.department : '',
-      designation: matchedVerifiedStaff ? matchedVerifiedStaff.designation : '',
-      role: targetRole,
+      phone: phone ? phone.trim() : '',
+      role: 'guest',
+      mustChangePassword: false,
       preferences: Array.isArray(preferences) && preferences.length > 0 
         ? preferences 
         : ['Wellness & Spa', 'Fine Dining'],
@@ -204,23 +178,28 @@ router.post('/register', async (req, res) => {
 
     await newUser.save();
 
-    // If verified staff record matched, update it
-    if (matchedVerifiedStaff) {
-      matchedVerifiedStaff.isRegistered = true;
-      matchedVerifiedStaff.registeredUserId = newUser._id;
-      await matchedVerifiedStaff.save();
+    // AUTO-LINKING: Automatically bind any past visitor clearance applications submitted with this email
+    try {
+      const GuestRequest = require('../models/GuestRequest');
+      const linkResult = await GuestRequest.updateMany(
+        { guestEmail: cleanEmail, $or: [{ user: null }, { user: { $exists: false } }] },
+        { $set: { user: newUser._id } }
+      );
+      if (linkResult.modifiedCount > 0) {
+        console.log(`🔗 Auto-linked ${linkResult.modifiedCount} prior visitor application(s) to new guest account: ${cleanEmail}`);
+      }
+    } catch (linkErr) {
+      console.error('Error auto-linking prior visitor applications on register:', linkErr);
     }
 
     const payload = {
       id: newUser._id.toString(),
       name: newUser.name,
       email: newUser.email,
-      role: newUser.role,
+      role: 'guest',
       phone: newUser.phone,
-      staffId: newUser.staffId,
-      department: newUser.department,
-      designation: newUser.designation,
       preferences: newUser.preferences,
+      mustChangePassword: false,
       isSuperAdmin: false,
     };
 
@@ -228,9 +207,7 @@ router.post('/register', async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: targetRole === 'staff' 
-        ? `Staff verification verified! Welcome, ${newUser.name}.`
-        : 'Registration successful! Welcome to Guest Leisureing.',
+      message: 'Guest profile registration successful! Any past visitor applications submitted with this email have been linked to your account.',
       token,
       user: payload,
       redirectUrl: '/guest-dashboard.html',
@@ -281,6 +258,7 @@ router.get('/me', verifyToken, async (req, res) => {
         isDeptAdmin: Boolean(user.isDeptAdmin || user.role === 'dept_admin'),
         adminDepartment: user.adminDepartment || user.department || '',
         preferences: user.preferences,
+        mustChangePassword: Boolean(user.mustChangePassword),
         createdAt: user.createdAt,
         lastLogin: user.lastLogin,
         isSuperAdmin: false,
@@ -288,6 +266,68 @@ router.get('/me', verifyToken, async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @route   POST /api/auth/change-password
+// @desc    Change password (used for mandatory first-time password reset or profile update)
+router.post('/change-password', verifyToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Both current password and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+    }
+
+    if (req.user.isSuperAdmin || req.user.id === SUPER_ADMIN_ID) {
+      return res.status(400).json({ success: false, message: 'Super Administrator credentials are managed via environment configuration.' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User record not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Incorrect current / temporary password.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.mustChangePassword = false;
+    await user.save();
+
+    const updatedPayload = {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      staffId: user.staffId,
+      department: user.department,
+      designation: user.designation,
+      isDeptAdmin: Boolean(user.isDeptAdmin || user.role === 'dept_admin'),
+      adminDepartment: user.adminDepartment || user.department || '',
+      preferences: user.preferences,
+      mustChangePassword: false,
+      isSuperAdmin: false,
+    };
+
+    const newToken = jwt.sign(updatedPayload, JWT_SECRET, { expiresIn: '7d' });
+
+    return res.json({
+      success: true,
+      message: 'Password updated successfully! Welcome to your official portal desk.',
+      user: updatedPayload,
+      token: newToken,
+    });
+  } catch (error) {
+    console.error('Password change error:', error);
+    return res.status(500).json({ success: false, message: 'Server error updating password: ' + error.message });
   }
 });
 

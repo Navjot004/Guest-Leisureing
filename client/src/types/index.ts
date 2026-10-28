@@ -15,6 +15,7 @@ export interface User {
   createdAt?: string;
   lastLogin?: string;
   isSuperAdmin?: boolean;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {

@@ -379,6 +379,71 @@ async function sendFacilityUpdateEmail(request, facilityType, details = {}) {
   });
 }
 
+/**
+ * Send official credentials when Super Admin provisions a staff account
+ */
+async function sendStaffProvisionedEmail({ staffName, staffEmail, staffId, department, designation, tempPassword }) {
+  const portalUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const loginUrl = `${portalUrl}/login`;
+
+  const title = 'CT University Portal • Official Staff Credentials Issued';
+  const subtitle = 'Department Governance & Academic Operational Desk Access';
+  const subject = `[CT University] Official Staff Account Credentials - Staff ID: ${staffId}`;
+
+  const bodyHtml = `
+    <p>Dear <strong>${staffName}</strong>,</p>
+    <p>Your institutional staff account has been created on the <strong>CT University Campus Visitor & Caretaker Operations Portal</strong> by the Dean's Office.</p>
+    
+    <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 18px; margin: 20px 0;">
+      <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #1E3A8A; letter-spacing: 0.5px; margin-bottom: 8px;">
+        OFFICIAL LOGIN CREDENTIALS
+      </div>
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 6px 0; color: #475569; width: 40%;"><strong>Staff Login ID:</strong></td>
+          <td style="padding: 6px 0;"><code style="background: #FFFFFF; border: 1px solid #CBD5E1; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #1E3A8A; font-size: 15px;">${staffId}</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #475569;"><strong>Official Email:</strong></td>
+          <td style="padding: 6px 0;"><strong>${staffEmail}</strong></td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #475569;"><strong>Temporary Password:</strong></td>
+          <td style="padding: 6px 0;"><code style="background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 15px;">${tempPassword}</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #475569;"><strong>Department:</strong></td>
+          <td style="padding: 6px 0;">${department || 'General Academic'}${designation ? ` (${designation})` : ''}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 12px 16px; border-radius: 4px; font-size: 13px; color: #92400E; margin: 16px 0;">
+      <strong>⚠️ Mandatory First Login Security Policy:</strong><br />
+      Upon your first login, the university system will prompt you to set your own permanent, confidential password before proceeding to your dashboard.
+    </div>
+
+    <p style="font-size: 13px; color: #64748B;">Please click the button below to sign in using your Staff ID and temporary password:</p>
+  `;
+
+  const html = createEmailTemplate({
+    title,
+    subtitle,
+    bodyHtml,
+    actionButtonText: 'Access Staff Login Portal ➔',
+    actionButtonUrl: loginUrl,
+    referenceCode: staffId,
+  });
+
+  return sendMail({
+    to: staffEmail,
+    subject,
+    html,
+    logType: 'STAFF_ACCOUNT_PROVISIONED',
+    referenceCode: staffId,
+  });
+}
+
 function getRecentEmailLogs() {
   return emailAuditLogs;
 }
@@ -387,5 +452,6 @@ module.exports = {
   sendApplicationReceivedEmail,
   sendClearanceDecisionEmail,
   sendFacilityUpdateEmail,
+  sendStaffProvisionedEmail,
   getRecentEmailLogs,
 };

@@ -13,6 +13,7 @@ import { HomePage } from './pages/HomePage';
 import { GuestDashboardPage } from './pages/GuestDashboardPage';
 import { DepartmentAdminPortal } from './pages/DepartmentAdminPortal';
 import { LockIcon, UserPlusIcon, ShieldIcon } from './components/Icons';
+import { FirstLoginPasswordChangeModal } from './components/FirstLoginPasswordChangeModal';
 import type { User } from './types';
 
 // Centered Unauthenticated Auth Layout
@@ -183,124 +184,141 @@ const AppRoutes: React.FC = () => {
     navigate('/');
   };
 
+  const handlePasswordChanged = (updatedUser: User, updatedToken: string) => {
+    setCurrentUser(updatedUser);
+    setToken(updatedToken);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('token', updatedToken);
+  };
+
   return (
-    <Routes>
-      {/* 1. Public Arrival Gateway Homepage */}
-      <Route
-        path="/"
-        element={
-          <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
-            <HomePage currentUser={currentUser} onLogout={handleLogout} />
-          </PortalLayout>
-        }
-      />
-
-      {/* 2. Guest Dashboard (Protected for guests or login) */}
-      <Route
-        path="/guest-dashboard"
-        element={
-          currentUser ? (
+    <>
+      {currentUser && currentUser.mustChangePassword && (
+        <FirstLoginPasswordChangeModal
+          currentUser={currentUser}
+          token={token}
+          onPasswordChanged={handlePasswordChanged}
+          onLogout={handleLogout}
+        />
+      )}
+      <Routes>
+        {/* 1. Public Arrival Gateway Homepage */}
+        <Route
+          path="/"
+          element={
             <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
-              <GuestDashboardPage
-                currentUser={currentUser}
-                token={token}
-                onLogout={handleLogout}
-              />
+              <HomePage currentUser={currentUser} onLogout={handleLogout} />
             </PortalLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+          }
+        />
 
-      {/* 3. Login Route */}
-      <Route
-        path="/login"
-        element={
-          currentUser ? (
-            (currentUser.role === 'superadmin' || currentUser.isSuperAdmin) ? (
-              <Navigate to="/super-admin" replace />
-            ) : (currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
-              <Navigate to={getDeptRedirect(currentUser)} replace />
+        {/* 2. Guest Dashboard (Protected for guests or login) */}
+        <Route
+          path="/guest-dashboard"
+          element={
+            currentUser ? (
+              <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
+                <GuestDashboardPage
+                  currentUser={currentUser}
+                  token={token}
+                  onLogout={handleLogout}
+                />
+              </PortalLayout>
             ) : (
-              <Navigate to="/guest-dashboard" replace />
+              <Navigate to="/login" replace />
             )
-          ) : (
-            <AuthLayout activeTab="login">
-              <LoginPage
-                onLoginSuccess={handleLoginSuccess}
-                onNavigateToRegister={() => navigate('/register')}
-              />
-            </AuthLayout>
-          )
-        }
-      />
+          }
+        />
 
-      {/* 4. Register Route */}
-      <Route
-        path="/register"
-        element={
-          currentUser ? (
-            (currentUser.role === 'superadmin' || currentUser.isSuperAdmin) ? (
-              <Navigate to="/super-admin" replace />
-            ) : (currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
-              <Navigate to={getDeptRedirect(currentUser)} replace />
+        {/* 3. Login Route */}
+        <Route
+          path="/login"
+          element={
+            currentUser ? (
+              (currentUser.role === 'superadmin' || currentUser.isSuperAdmin) ? (
+                <Navigate to="/super-admin" replace />
+              ) : (currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
+                <Navigate to={getDeptRedirect(currentUser)} replace />
+              ) : (
+                <Navigate to="/guest-dashboard" replace />
+              )
             ) : (
-              <Navigate to="/guest-dashboard" replace />
+              <AuthLayout activeTab="login">
+                <LoginPage
+                  onLoginSuccess={handleLoginSuccess}
+                  onNavigateToRegister={() => navigate('/register')}
+                />
+              </AuthLayout>
             )
-          ) : (
-            <AuthLayout activeTab="register">
-              <RegisterPage
-                onRegisterSuccess={handleRegisterSuccess}
-                onNavigateToLogin={() => navigate('/login')}
-              />
-            </AuthLayout>
-          )
-        }
-      />
+          }
+        />
 
-      {/* 5. Dedicated Department Admin Portals */}
-      <Route
-        path="/dept-admin/:dept"
-        element={
-          currentUser ? (
-            <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
-              <DepartmentAdminPortal
-                currentUser={currentUser}
-                token={token}
-                onLogout={handleLogout}
-              />
-            </PortalLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-      <Route path="/dept-admin" element={<Navigate to="/dept-admin/accommodation" replace />} />
+        {/* 4. Register Route */}
+        <Route
+          path="/register"
+          element={
+            currentUser ? (
+              (currentUser.role === 'superadmin' || currentUser.isSuperAdmin) ? (
+                <Navigate to="/super-admin" replace />
+              ) : (currentUser.role === 'dept_admin' || currentUser.isDeptAdmin || currentUser.role === 'staff') ? (
+                <Navigate to={getDeptRedirect(currentUser)} replace />
+              ) : (
+                <Navigate to="/guest-dashboard" replace />
+              )
+            ) : (
+              <AuthLayout activeTab="register">
+                <RegisterPage
+                  onRegisterSuccess={handleRegisterSuccess}
+                  onNavigateToLogin={() => navigate('/login')}
+                />
+              </AuthLayout>
+            )
+          }
+        />
 
-      {/* 6. Super Admin Route (Protected, supports /super-admin, /super-admin/verified-staff, /super-admin/guests) */}
-      <Route
-        path="/super-admin/*"
-        element={
-          currentUser ? (
-            <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
-              <SuperAdminPage
-                currentUser={currentUser}
-                token={token}
-                onNavigateToLogin={handleLogout}
-                onLogout={handleLogout}
-              />
-            </PortalLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+        {/* 5. Dedicated Department Admin Portals */}
+        <Route
+          path="/dept-admin/:dept"
+          element={
+            currentUser ? (
+              <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
+                <DepartmentAdminPortal
+                  currentUser={currentUser}
+                  token={token}
+                  onLogout={handleLogout}
+                />
+              </PortalLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route path="/dept-admin" element={<Navigate to="/dept-admin/accommodation" replace />} />
 
-      {/* 6. Aliases and Default Fallback */}
-      <Route path="/admin" element={<Navigate to="/super-admin" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* 6. Super Admin Route (Protected, supports /super-admin, /super-admin/verified-staff, /super-admin/guests) */}
+        <Route
+          path="/super-admin/*"
+          element={
+            currentUser ? (
+              <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
+                <SuperAdminPage
+                  currentUser={currentUser}
+                  token={token}
+                  onNavigateToLogin={handleLogout}
+                  onLogout={handleLogout}
+                />
+              </PortalLayout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* 7. Aliases and Default Fallback */}
+        <Route path="/admin" element={<Navigate to="/super-admin" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 };
 

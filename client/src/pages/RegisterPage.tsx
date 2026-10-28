@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { User, AuthResponse } from '../types';
-import { BriefcaseIcon, UsersIcon, EyeIcon, EyeOffIcon, CheckCircleIcon } from '../components/Icons';
+import { UsersIcon, EyeIcon, EyeOffIcon, CheckCircleIcon, ShieldIcon } from '../components/Icons';
 
 interface RegisterPageProps {
   onRegisterSuccess: (user: User, token: string) => void;
@@ -11,13 +11,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   onRegisterSuccess,
   onNavigateToLogin,
 }) => {
-  const [registerType, setRegisterType] = useState<'staff' | 'guest'>('staff');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [staffId, setStaffId] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [callout, setCallout] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
@@ -45,8 +43,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           email: email.trim(),
           password: password.trim(),
           phone: phone.trim(),
-          staffId: registerType === 'staff' ? staffId.trim() : undefined,
-          role: registerType,
+          role: 'guest',
         }),
       });
 
@@ -55,9 +52,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
       if (data.success && data.user && data.token) {
         setCallout({
           type: 'success',
-          text: registerType === 'staff'
-            ? 'Staff verification confirmed! Account successfully activated.'
-            : 'Guest profile intake completed successfully.',
+          text: data.message || 'Guest account created! Prior visitor applications have been linked to your profile.',
         });
         setTimeout(() => {
           onRegisterSuccess(data.user!, data.token!);
@@ -75,41 +70,34 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   return (
     <div className="auth-card">
       <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
-        <h1 className="headline-sm" style={{ marginBottom: '4px' }}>
-          {registerType === 'staff' ? 'Staff Account Activation' : 'Guest Intake Registration'}
-        </h1>
-        <p className="body-sm">
-          {registerType === 'staff'
-            ? 'Staff registration is restricted to personnel on the Verified Staff List uploaded by Super Admin.'
-            : 'Provision an individual institutional guest hospitality record.'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <UsersIcon size={20} color="var(--primary)" />
+          <h1 className="headline-sm" style={{ margin: 0 }}>
+            Guest Profile Registration
+          </h1>
+        </div>
+        <p className="body-sm" style={{ color: 'var(--text-muted)' }}>
+          Create an account to track your campus visit passes, room allotments, and dining requests.
         </p>
       </div>
 
-      {/* Role Switcher Tab */}
-      <div className="segmented-track" style={{ marginBottom: '1.25rem' }}>
-        <button
-          type="button"
-          className={`segmented-segment ${registerType === 'staff' ? 'active' : ''}`}
-          onClick={() => {
-            setRegisterType('staff');
-            setCallout(null);
-          }}
-        >
-          <BriefcaseIcon size={14} />
-          <span>Staff Registration</span>
-        </button>
-
-        <button
-          type="button"
-          className={`segmented-segment ${registerType === 'guest' ? 'active' : ''}`}
-          onClick={() => {
-            setRegisterType('guest');
-            setCallout(null);
-          }}
-        >
-          <UsersIcon size={14} />
-          <span>Guest Registration</span>
-        </button>
+      {/* Helpful Pre-Login Guest Booking Note */}
+      <div
+        style={{
+          marginBottom: '1rem',
+          padding: '10px 14px',
+          background: '#EFF6FF',
+          border: '1px solid #BFDBFE',
+          borderRadius: 'var(--radius-base)',
+          fontSize: '0.75rem',
+          color: '#1E40AF',
+          lineHeight: '1.4',
+        }}
+      >
+        <strong>✨ Already submitted a visitor entry form?</strong>
+        <p style={{ margin: '4px 0 0 0' }}>
+          Use the <strong>same email address</strong> you used on the guest form. All your existing bookings, pass tickets, and approval updates will be linked to your dashboard automatically!
+        </p>
       </div>
 
       {callout && <div className={`callout callout-${callout.type}`}>{callout.text}</div>}
@@ -120,7 +108,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           <input
             type="text"
             className="text-input"
-            placeholder={registerType === 'staff' ? 'e.g. Dr. Nitin Tandon' : 'e.g. John Doe'}
+            placeholder="e.g. Dr. Jane Smith"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -128,27 +116,12 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           />
         </div>
 
-        {registerType === 'staff' && (
-          <div className="form-field">
-            <label className="field-label">University Staff / Employee ID</label>
-            <input
-              type="text"
-              className="text-input mono"
-              placeholder="e.g. 24051"
-              value={staffId}
-              onChange={(e) => setStaffId(e.target.value)}
-            />
-          </div>
-        )}
-
         <div className="form-field">
-          <label className="field-label">
-            {registerType === 'staff' ? 'Institutional Email (as listed in roster)' : 'Email Address'}
-          </label>
+          <label className="field-label">Email Address</label>
           <input
             type="email"
             className="text-input mono"
-            placeholder={registerType === 'staff' ? 'drnitin@ctuniversity.in' : 'john.doe@organization.org'}
+            placeholder="e.g. jane.smith@example.org"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -161,7 +134,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           <input
             type="tel"
             className="text-input mono"
-            placeholder="9847230100"
+            placeholder="e.g. 9876543210"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
@@ -198,19 +171,38 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           style={{ marginTop: '0.75rem' }}
         >
           {loading ? (
-            'Verifying Record...'
+            'Creating Profile...'
           ) : (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               <CheckCircleIcon size={15} />
-              <span>
-                {registerType === 'staff'
-                  ? 'Verify & Activate Staff Account'
-                  : 'Complete Guest Intake'}
-              </span>
+              <span>Complete Guest Registration</span>
             </span>
           )}
         </button>
       </form>
+
+      {/* Notice for University Staff */}
+      <div
+        style={{
+          marginTop: '1rem',
+          padding: '10px 12px',
+          background: 'var(--surface-wash)',
+          border: '1px solid var(--border-structural)',
+          borderRadius: 'var(--radius-base)',
+          fontSize: '0.75rem',
+          color: 'var(--text-muted)',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'flex-start',
+        }}
+      >
+        <span style={{ flexShrink: 0, marginTop: '2px', display: 'inline-flex' }}>
+          <ShieldIcon size={14} color="var(--primary)" />
+        </span>
+        <span>
+          <strong>University Staff:</strong> Staff self-registration is closed. Staff Login IDs and temporary passwords are issued directly by the Dean's Office / Super Admin to your institutional email.
+        </span>
+      </div>
 
       <div
         style={{
@@ -223,7 +215,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           fontSize: '0.8125rem',
         }}
       >
-        <span style={{ color: 'var(--text-muted)' }}>Already registered?</span>
+        <span style={{ color: 'var(--text-muted)' }}>Already registered or University Staff?</span>
         <button
           type="button"
           onClick={onNavigateToLogin}

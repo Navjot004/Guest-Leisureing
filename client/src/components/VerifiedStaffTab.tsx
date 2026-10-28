@@ -60,6 +60,48 @@ export const VerifiedStaffTab: React.FC<VerifiedStaffTabProps> = ({ token }) => 
   const [selectedMode, setSelectedMode] = useState<'append' | 'replace' | 'remove'>('append');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Staff Account Provisioning State
+  const [provisioningId, setProvisioningId] = useState<string | null>(null);
+  const [provisionedCredentialModal, setProvisionedCredentialModal] = useState<{
+    staffName: string;
+    staffId: string;
+    email: string;
+    tempPassword: string;
+    emailSent: boolean;
+  } | null>(null);
+
+  const handleProvisionStaff = async (member: VerifiedStaffMember) => {
+    try {
+      setProvisioningId(member._id);
+      setFeedback(null);
+      const res = await fetch(`/api/admin/verified-staff/${member._id}/provision-account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFeedback({ type: 'success', text: data.message });
+        setProvisionedCredentialModal({
+          staffName: member.name,
+          staffId: data.staffId || member.staffId,
+          email: member.email,
+          tempPassword: data.tempPassword,
+          emailSent: Boolean(data.emailSent),
+        });
+        loadVerifiedStaff();
+      } else {
+        setFeedback({ type: 'error', text: data.message || 'Failed to provision staff account.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: 'Error provisioning staff account: ' + err.message });
+    } finally {
+      setProvisioningId(null);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       loadVerifiedStaff();
@@ -754,16 +796,41 @@ export const VerifiedStaffTab: React.FC<VerifiedStaffTabProps> = ({ token }) => 
                     {member.isRegistered ? (
                       <span className="badge-pill badge-cleared" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <CheckCircleIcon size={12} />
-                        <span>Registered</span>
+                        <span>Active Account</span>
                       </span>
                     ) : (
                       <span className="badge-pill" style={{ background: '#F1F5F9', color: 'var(--text-muted)' }}>
-                        Pending Registration
+                        No Login Created
                       </span>
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                      {!member.isRegistered ? (
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-primary"
+                          onClick={() => handleProvisionStaff(member)}
+                          disabled={provisioningId === member._id}
+                          title="Generate credentials and send email invitation to staff"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#1E3A8A' }}
+                        >
+                          <UserPlusIcon size={12} />
+                          <span>{provisioningId === member._id ? 'Creating...' : 'Create Login'}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-secondary"
+                          onClick={() => handleProvisionStaff(member)}
+                          disabled={provisioningId === member._id}
+                          title="Generate new temporary password and resend email"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <RefreshIcon size={12} />
+                          <span>{provisioningId === member._id ? 'Resetting...' : 'Reset Pass'}</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="btn btn-xs btn-secondary"
@@ -1169,6 +1236,102 @@ export const VerifiedStaffTab: React.FC<VerifiedStaffTabProps> = ({ token }) => 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          PROVISIONED STAFF CREDENTIALS MODAL
+         ========================================================================= */}
+      {provisionedCredentialModal && (
+        <div className="modal-backdrop">
+          <div className="modal-container" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                  }}
+                >
+                  ✓
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Staff Login Credentials Issued
+                  </h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {provisionedCredentialModal.emailSent ? 'Official invitation dispatched to staff email' : 'Account active in system'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="sidebar-close-btn"
+                style={{ display: 'block' }}
+                onClick={() => setProvisionedCredentialModal(null)}
+              >
+                <CloseIcon size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p className="body-sm" style={{ marginBottom: '16px' }}>
+                Login account for <strong>{provisionedCredentialModal.staffName}</strong> has been provisioned. The staff member will be required to change this temporary password upon first login.
+              </p>
+
+              <div
+                style={{
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--border-structural)',
+                  borderRadius: 'var(--radius-base)',
+                  padding: '16px',
+                  marginBottom: '16px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Staff Login ID:</span>
+                  <span className="code-chip" style={{ fontSize: '0.875rem', fontWeight: 700 }}>
+                    {provisionedCredentialModal.staffId}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Registered Email:</span>
+                  <span className="mono" style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                    {provisionedCredentialModal.email}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Temporary Password:</span>
+                  <span className="code-chip" style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#92400E', background: '#FEF3C7', border: '1px solid #FCD34D' }}>
+                    {provisionedCredentialModal.tempPassword}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                💡 <strong>Login Notice:</strong> Staff member can login directly with their Staff ID (<span className="mono">{provisionedCredentialModal.staffId}</span>) or email address.
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => setProvisionedCredentialModal(null)}
+                style={{ width: '100%' }}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

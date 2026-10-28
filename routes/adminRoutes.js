@@ -982,6 +982,104 @@ router.put('/verified-staff/:id', async (req, res) => {
   }
 });
 
+// @route   POST /api/admin/verified-staff/:id/provision-account
+// @desc    Super Admin provisions login credentials for verified staff member, sends email, forces password change on first login
+router.post('/verified-staff/:id/provision-account', async (req, res) => {
+  try {
+    const staff = await VerifiedStaff.findById(req.params.id);
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Verified staff record not found.' });
+    }
+
+    if (!staff.email) {
+      return res.status(400).json({ success: false, message: 'Staff member does not have an official email address.' });
+    }
+
+    const cleanEmail = staff.email.toLowerCase().trim();
+    const cleanStaffId = staff.staffId.toString().trim();
+
+    // Check if user already exists
+    let existingUser = await User.findOne({
+      $or: [{ email: cleanEmail }, { staffId: cleanStaffId }],
+    });
+
+    // Generate random secure temporary password, e.g. CTU#8xK2q5
+    const randomChars = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const tempPassword = `CTU#${randomChars}`;
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+    let user;
+    if (existingUser) {
+      // Re-provision / reset credentials
+      existingUser.password = hashedPassword;
+      existingUser.mustChangePassword = true;
+      existingUser.staffId = cleanStaffId;
+      existingUser.department = staff.department || existingUser.department;
+      existingUser.designation = staff.designation || existingUser.designation;
+      existingUser.status = 'active';
+      user = await existingUser.save();
+    } else {
+      // Determine if caretaker / dept_admin or regular staff
+      const isCaretaker = (staff.category && staff.category.toLowerCase().includes('caretaker')) ||
+        (staff.designation && staff.designation.toLowerCase().includes('caretaker')) ||
+        (staff.designation && staff.designation.toLowerCase().includes('warden'));
+
+      user = new User({
+        name: staff.name,
+        email: cleanEmail,
+        phone: staff.phone || '',
+        staffId: cleanStaffId,
+        department: staff.department || '',
+        designation: staff.designation || '',
+        role: isCaretaker ? 'dept_admin' : 'staff',
+        isDeptAdmin: Boolean(isCaretaker),
+        adminDepartment: staff.department || '',
+        password: hashedPassword,
+        mustChangePassword: true,
+        status: 'active',
+        lastLogin: null,
+      });
+      user = await user.save();
+    }
+
+    // Mark verified staff record as registered
+    staff.isRegistered = true;
+    staff.registeredUserId = user._id;
+    await staff.save();
+
+    // Send official email with credentials
+    let emailSent = false;
+    try {
+      await emailService.sendStaffProvisionedEmail({
+        staffName: staff.name,
+        staffEmail: cleanEmail,
+        staffId: cleanStaffId,
+        department: staff.department,
+        designation: staff.designation,
+        tempPassword,
+      });
+      emailSent = true;
+    } catch (mailErr) {
+      console.error('Error dispatching staff provisioning email:', mailErr);
+    }
+
+    return res.json({
+      success: true,
+      message: `Account provisioned successfully for ${staff.name}! Staff Login ID: "${cleanStaffId}". Credentials sent to ${cleanEmail}.`,
+      staff,
+      userId: user._id,
+      staffId: cleanStaffId,
+      tempPassword,
+      emailSent,
+    });
+  } catch (error) {
+    console.error('Provisioning error:', error);
+    return res.status(500).json({ success: false, message: 'Provisioning failed: ' + error.message });
+  }
+});
+
 // @route   DELETE /api/admin/verified-staff/:id
 // @desc    Delete single verified staff record
 router.delete('/verified-staff/:id', async (req, res) => {
