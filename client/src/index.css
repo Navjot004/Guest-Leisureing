@@ -2186,3 +2186,27 @@ select.input-text {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Print Styles for Official Digital Gate Pass */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .portal-topbar,
+  .uni-tabs-container,
+  .uni-card-header,
+  button,
+  .btn,
+  form,
+  .callout {
+    display: none !important;
+  }
+  #printable-gate-pass {
+    box-shadow: none !important;
+    border: 2px solid #1e3a8a !important;
+    margin: 0 !important;
+    width: 100% !important;
+    page-break-inside: avoid;
+  }
+}

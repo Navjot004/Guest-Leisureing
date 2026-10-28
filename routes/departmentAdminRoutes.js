@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const GuestRequest = require('../models/GuestRequest');
+const emailService = require('../services/emailService');
 const { verifyDeptAdminOrSuperAdmin } = require('../middleware/auth');
 
 // All routes here require Department Admin or Super Admin privileges
@@ -48,7 +49,7 @@ router.get('/profile', (req, res) => {
 });
 
 // @route   GET /api/dept-admin/:department/stats
-// @desc    Get real-time KPI metrics for this department
+// @desc    Get real-time KPI metrics for this department (only for Super Admin approved requests)
 router.get('/:department/stats', ensureDepartmentScope, async (req, res) => {
   try {
     const dept = normalizeDept(req.params.department);
@@ -57,45 +58,56 @@ router.get('/:department/stats', ensureDepartmentScope, async (req, res) => {
     let inProgress = 0;
     let completed = 0;
 
+    const baseFilter = { clearanceStatus: 'approved' };
+
     if (dept === 'accommodation') {
-      total = await GuestRequest.countDocuments({ 'accommodation.selected': true });
+      total = await GuestRequest.countDocuments({ ...baseFilter, 'accommodation.selected': true });
       pending = await GuestRequest.countDocuments({
+        ...baseFilter,
         'accommodation.selected': true,
         'accommodation.status': 'pending',
       });
       inProgress = await GuestRequest.countDocuments({
+        ...baseFilter,
         'accommodation.selected': true,
         'accommodation.status': 'allocated',
       });
       completed = await GuestRequest.countDocuments({
+        ...baseFilter,
         'accommodation.selected': true,
         'accommodation.status': 'completed',
       });
     } else if (dept === 'catering') {
-      total = await GuestRequest.countDocuments({ 'food.selected': true });
+      total = await GuestRequest.countDocuments({ ...baseFilter, 'food.selected': true });
       pending = await GuestRequest.countDocuments({
+        ...baseFilter,
         'food.selected': true,
         'food.cateringStatus': 'pending',
       });
       inProgress = await GuestRequest.countDocuments({
+        ...baseFilter,
         'food.selected': true,
         'food.cateringStatus': 'arranged',
       });
       completed = await GuestRequest.countDocuments({
+        ...baseFilter,
         'food.selected': true,
         'food.cateringStatus': 'completed',
       });
     } else if (dept === 'transport') {
-      total = await GuestRequest.countDocuments({ 'transport.selected': true });
+      total = await GuestRequest.countDocuments({ ...baseFilter, 'transport.selected': true });
       pending = await GuestRequest.countDocuments({
+        ...baseFilter,
         'transport.selected': true,
         'transport.status': 'pending',
       });
       inProgress = await GuestRequest.countDocuments({
+        ...baseFilter,
         'transport.selected': true,
         'transport.status': { $in: ['assigned', 'in_transit'] },
       });
       completed = await GuestRequest.countDocuments({
+        ...baseFilter,
         'transport.selected': true,
         'transport.status': 'completed',
       });
@@ -118,13 +130,16 @@ router.get('/:department/stats', ensureDepartmentScope, async (req, res) => {
 });
 
 // @route   GET /api/dept-admin/:department/requests
-// @desc    Retrieve guest visit requests relevant to this department
+// @desc    Retrieve guest visit requests relevant to this department (ONLY Super Admin approved requests)
 router.get('/:department/requests', ensureDepartmentScope, async (req, res) => {
   try {
     const dept = normalizeDept(req.params.department);
     const { status, search } = req.query;
 
-    let filter = {};
+    // Strict institutional rule: Caretakers only see requests that were APPROVED by Super Admin / Dean
+    let filter = {
+      clearanceStatus: 'approved',
+    };
 
     if (dept === 'accommodation') {
       filter['accommodation.selected'] = true;
@@ -228,9 +243,22 @@ router.put('/:department/requests/:id/assign', ensureDepartmentScope, async (req
     request.updatedAt = new Date();
     await request.save();
 
+    // Trigger automated email update to guest regarding facility allotment
+    const facilityType = dept === 'catering' ? 'food' : dept;
+    const details = {
+      roomNumber: request.accommodation?.allocatedRoom,
+      assignedBy: adminName,
+      vehicle: request.transport?.allocatedVehicle,
+      driver: request.transport?.allocatedDriver,
+      driverPhone: request.transport?.driverPhone,
+    };
+    emailService.sendFacilityUpdateEmail(request, facilityType, details).catch((err) => {
+      console.error('Facility update email notification error:', err.message);
+    });
+
     return res.json({
       success: true,
-      message: `Updated ${dept} assignment for ${request.guestName}.`,
+      message: `Updated ${dept} assignment for ${request.guestName}. Email notification sent.`,
       request,
     });
   } catch (error) {

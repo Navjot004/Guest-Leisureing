@@ -95,6 +95,10 @@ export interface GuestRequestItem {
   institution?: string;
   purposeOfVisit?: string;
   referenceCode: string;
+  clearanceStatus?: 'pending' | 'approved' | 'rejected';
+  clearedBy?: string;
+  clearanceNotes?: string;
+  clearedAt?: string;
   accommodation?: {
     selected: boolean;
     checkInDate?: string;

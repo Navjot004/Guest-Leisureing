@@ -11,10 +11,12 @@ import {
   EditIcon,
   TrashIcon,
   CloseIcon,
+  ShieldIcon,
 } from '../components/Icons';
 import { VerifiedStaffTab } from '../components/VerifiedStaffTab';
 import { ManageStaffTab } from '../components/ManageStaffTab';
 import { DepartmentsSection } from '../components/DepartmentsSection';
+import { VisitorClearanceTab } from '../components/VisitorClearanceTab';
 
 interface SuperAdminPageProps {
   currentUser: User | null;
@@ -40,6 +42,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   // - /super-admin/verified-staff -> Verified Staff Roster
   // - /super-admin/guests -> Guest Users
   // - /super-admin or /super-admin/staff -> Staff Users
+  const isViewingClearance = location.pathname.includes('/clearance') || location.pathname.includes('/visitor-clearance') || location.pathname.includes('/requests');
   const isViewingDepartments = location.pathname.includes('/departments');
   const isViewingManageStaff = location.pathname.includes('/manage-staff');
   const isViewingVerifiedRoster = location.pathname.includes('/verified-staff');
@@ -276,7 +279,9 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       >
         <div>
           <h1 className="headline-lg">
-            {isViewingDepartments
+            {isViewingClearance
+              ? 'Visitor Clearance & Approvals'
+              : isViewingDepartments
               ? 'Departments'
               : isViewingManageStaff
               ? 'Manage Staff'
@@ -285,7 +290,9 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
               : 'Users Management'}
           </h1>
           <p className="body-sm">
-            {isViewingDepartments
+            {isViewingClearance
+              ? 'Dean Office Gatekeeper: Review external visitors, grant campus visit clearances, and dispatch requirements to Hostel, Mess, and Transit Caretaker Desks.'
+              : isViewingDepartments
               ? 'Academic faculties, divisions, and departmental governance workspace'
               : isViewingManageStaff
               ? 'Promote university staff to Department Administrators, assign departmental governance, and manage operational privileges'
@@ -309,7 +316,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
           )}
 
           {/* IN STAFF USERS: TOGGLE BETWEEN VERIFIED STAFF LIST BUTTON AND BACK BUTTON */}
-          {!isViewingManageStaff && !isViewingDepartments && activeTab === 'staff' && (
+          {!isViewingManageStaff && !isViewingDepartments && !isViewingClearance && activeTab === 'staff' && (
             isViewingVerifiedRoster ? (
               <button
                 type="button"
@@ -346,21 +353,36 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         </div>
       )}
 
-      {/* Two Tabs: Staff Users & Guest Users (ONLY VISIBLE WHEN NOT IN VERIFIED STAFF, MANAGE STAFF, OR DEPARTMENTS VIEW) */}
+      {/* 3 Main Tabs: Visitor Clearance, Staff Users, Guest Users */}
       {!isViewingVerifiedRoster && !isViewingManageStaff && !isViewingDepartments && (
         <div
           className="segmented-track"
           style={{
             width: 'fit-content',
-            minWidth: '320px',
+            minWidth: '460px',
             maxWidth: '100%',
             marginBottom: '1.25rem',
+            flexWrap: 'wrap',
           }}
         >
-          {/* Tab 1: Staff Users */}
+          {/* Tab 1: Visitor Clearance & Approvals */}
           <button
             type="button"
-            className={`segmented-segment ${activeTab === 'staff' ? 'active' : ''}`}
+            className={`segmented-segment ${isViewingClearance ? 'active' : ''}`}
+            onClick={() => {
+              navigate('/super-admin/clearance');
+              setSearchTerm('');
+            }}
+            style={{ fontWeight: 600 }}
+          >
+            <ShieldIcon size={14} color={isViewingClearance ? '#FFFFFF' : '#1E3A8A'} />
+            <span>Visitor Clearance Desk</span>
+          </button>
+
+          {/* Tab 2: Staff Users */}
+          <button
+            type="button"
+            className={`segmented-segment ${!isViewingClearance && activeTab === 'staff' ? 'active' : ''}`}
             onClick={() => {
               navigate('/super-admin');
               setSearchTerm('');
@@ -370,10 +392,10 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
             <span>Staff Users ({staffUsers.length})</span>
           </button>
 
-          {/* Tab 2: Guest Users */}
+          {/* Tab 3: Guest Users */}
           <button
             type="button"
-            className={`segmented-segment ${activeTab === 'guest' ? 'active' : ''}`}
+            className={`segmented-segment ${!isViewingClearance && activeTab === 'guest' ? 'active' : ''}`}
             onClick={() => {
               navigate('/super-admin/guests');
               setSearchTerm('');
@@ -386,7 +408,9 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       )}
 
       {/* VIEW CONTENT */}
-      {isViewingDepartments ? (
+      {isViewingClearance ? (
+        <VisitorClearanceTab token={token} />
+      ) : isViewingDepartments ? (
         <DepartmentsSection token={token} />
       ) : isViewingManageStaff ? (
         <ManageStaffTab token={token} />

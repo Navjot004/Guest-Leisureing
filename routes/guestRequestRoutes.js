@@ -93,9 +93,15 @@ router.post('/', optionalAuth, async (req, res) => {
 
     await newRequest.save();
 
+    // Trigger asynchronous email confirmation to guest (non-blocking)
+    const emailService = require('../services/emailService');
+    emailService.sendApplicationReceivedEmail(newRequest).catch((err) => {
+      console.error('Email dispatch warning (Application Received):', err.message);
+    });
+
     return res.status(201).json({
       success: true,
-      message: `Your visit and facility request has been successfully submitted!`,
+      message: `Your visit clearance request has been successfully submitted! An email notification has been dispatched.`,
       referenceCode: newRequest.referenceCode,
       request: newRequest,
     });

@@ -8,6 +8,7 @@ import {
   ClockIcon,
   CheckIcon,
   ShieldIcon,
+  RefreshIcon,
 } from '../components/Icons';
 
 interface HomePageProps {
@@ -32,12 +33,37 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
   // Active main tab: 'apply' | 'track' | 'guidelines'
   const [activeTab, setActiveTab] = useState<'apply' | 'track' | 'guidelines'>('apply');
 
-  // Sync active tab with URL query parameter (e.g. ?tab=track or ?tab=guidelines)
+  // Sync active tab and reference query parameter from URL (e.g. ?tab=track&ref=CTU-VIS-XXXXX)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
+    const refParam = params.get('ref');
+
     if (tabParam === 'track' || tabParam === 'guidelines' || tabParam === 'apply') {
       setActiveTab(tabParam as any);
+    }
+
+    if (refParam) {
+      const cleanRef = refParam.trim();
+      setTrackQuery(cleanRef);
+      setActiveTab('track');
+      setTrackingLoading(true);
+      fetch(`/api/guest-requests/track/${encodeURIComponent(cleanRef)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.request) {
+            setTrackedRequest(data.request);
+            setTrackError(null);
+          } else {
+            setTrackError(data.message || 'No record found with this reference code.');
+          }
+        })
+        .catch((err) => {
+          setTrackError(err.message || 'Network error looking up pass.');
+        })
+        .finally(() => {
+          setTrackingLoading(false);
+        });
     }
   }, [location.search]);
 
@@ -1084,86 +1110,402 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
               </form>
 
               {trackedRequest && (
-                <div
-                  style={{
-                    border: '1.5px solid #CBD5E1',
-                    borderRadius: '8px',
-                    padding: '1.5rem',
-                    background: '#FFFFFF',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #E2E8F0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
-                        Official Campus Visit Permit
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* LIVE MULTI-STAGE PROGRESS TRACKER */}
+                  <div
+                    style={{
+                      border: '1.5px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '1.5rem',
+                      background: '#FFFFFF',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '1.25rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.875rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>
+                          Multi-Stage Clearance & Allotment Status
+                        </div>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: '2px 0 0 0' }}>
+                          Visitor Application Tracker: #{trackedRequest.referenceCode}
+                        </h3>
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E3A8A' }}>
-                        {trackedRequest.referenceCode}
+
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span
+                          style={{
+                            padding: '4px 12px',
+                            borderRadius: '4px',
+                            fontSize: '0.8125rem',
+                            fontWeight: 700,
+                            background: trackedRequest.clearanceStatus === 'approved'
+                              ? '#DCFCE7'
+                              : trackedRequest.clearanceStatus === 'rejected'
+                              ? '#FEE2E2'
+                              : '#FEF3C7',
+                            color: trackedRequest.clearanceStatus === 'approved'
+                              ? '#166534'
+                              : trackedRequest.clearanceStatus === 'rejected'
+                              ? '#991B1B'
+                              : '#92400E',
+                          }}
+                        >
+                          {trackedRequest.clearanceStatus === 'approved'
+                            ? '✓ DEAN CLEARED'
+                            : trackedRequest.clearanceStatus === 'rejected'
+                            ? '✕ REJECTED'
+                            : '⏳ UNDER DEAN REVIEW'}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => {
+                            setTrackingLoading(true);
+                            fetch(`/api/guest-requests/track/${encodeURIComponent(trackedRequest.referenceCode)}`)
+                              .then((r) => r.json())
+                              .then((d) => {
+                                if (d.success && d.request) setTrackedRequest(d.request);
+                              })
+                              .finally(() => setTrackingLoading(false));
+                          }}
+                          title="Refresh live allotment status"
+                        >
+                          <RefreshIcon size={12} />
+                          <span>Live Refresh</span>
+                        </button>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <span
+                    {/* Step Timeline Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                      
+                      {/* Step 1: Dean Office Clearance */}
+                      <div
                         style={{
-                          padding: '6px 14px',
-                          borderRadius: '4px',
-                          fontSize: '0.8125rem',
-                          fontWeight: 700,
-                          background: trackedRequest.accommodation?.status === 'allocated' ? '#ECFDF5' : '#FEF3C7',
-                          color: trackedRequest.accommodation?.status === 'allocated' ? '#065F46' : '#92400E',
+                          background: trackedRequest.clearanceStatus === 'approved'
+                            ? '#F0FDF4'
+                            : trackedRequest.clearanceStatus === 'rejected'
+                            ? '#FEF2F2'
+                            : '#FFFBEB',
+                          border: trackedRequest.clearanceStatus === 'approved'
+                            ? '1.5px solid #10B981'
+                            : trackedRequest.clearanceStatus === 'rejected'
+                            ? '1.5px solid #EF4444'
+                            : '1.5px solid #F59E0B',
+                          borderRadius: '8px',
+                          padding: '1rem',
                         }}
                       >
-                        {trackedRequest.accommodation?.selected
-                          ? `Lodging: ${(trackedRequest.accommodation?.status || 'Pending').toUpperCase()}`
-                          : 'Visit Clearance: Active'}
-                      </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>
+                            {trackedRequest.clearanceStatus === 'approved' ? '✅' : trackedRequest.clearanceStatus === 'rejected' ? '❌' : '⏳'}
+                          </span>
+                          <strong style={{ fontSize: '0.875rem', color: '#0F172A' }}>
+                            1. Dean Office Clearance
+                          </strong>
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45 }}>
+                          {trackedRequest.clearanceStatus === 'approved' ? (
+                            <>
+                              <div style={{ color: '#047857', fontWeight: 700 }}>✓ Campus Entry Approved</div>
+                              <div style={{ fontSize: '0.72rem', color: '#065F46', marginTop: '2px' }}>
+                                Cleared by {trackedRequest.clearedBy || 'Dean Office'}
+                              </div>
+                            </>
+                          ) : trackedRequest.clearanceStatus === 'rejected' ? (
+                            <>
+                              <div style={{ color: '#B91C1C', fontWeight: 700 }}>✕ Clearance Denied</div>
+                              <div style={{ fontSize: '0.72rem', color: '#7F1D1D', marginTop: '2px' }}>
+                                Reason: {trackedRequest.clearanceNotes || 'Schedule conflict'}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div style={{ color: '#B45309', fontWeight: 700 }}>⏳ Under Dean Review</div>
+                              <div style={{ fontSize: '0.72rem', color: '#92400E', marginTop: '2px' }}>
+                                Super Admin queue position: In review
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 2: Hostel Room Allotment */}
+                      <div
+                        style={{
+                          background: !trackedRequest.accommodation?.selected
+                            ? '#F8FAFC'
+                            : trackedRequest.accommodation?.status === 'allocated'
+                            ? '#F0FDF4'
+                            : '#FFFBEB',
+                          border: !trackedRequest.accommodation?.selected
+                            ? '1px dashed #CBD5E1'
+                            : trackedRequest.accommodation?.status === 'allocated'
+                            ? '1.5px solid #10B981'
+                            : '1.5px solid #F59E0B',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>🏠</span>
+                          <strong style={{ fontSize: '0.875rem', color: '#0F172A' }}>
+                            2. Hostel Room Allotment
+                          </strong>
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45 }}>
+                          {!trackedRequest.accommodation?.selected ? (
+                            <div style={{ color: '#64748B', fontSize: '0.75rem' }}>Day Visit (No Lodging Requested)</div>
+                          ) : trackedRequest.clearanceStatus !== 'approved' ? (
+                            <div style={{ color: '#92400E', fontSize: '0.75rem' }}>Awaiting Super Admin clearance first</div>
+                          ) : trackedRequest.accommodation?.allocatedRoom ? (
+                            <>
+                              <div style={{ color: '#047857', fontWeight: 700 }}>
+                                Room: {trackedRequest.accommodation.allocatedRoom}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#065F46', marginTop: '2px' }}>
+                                {trackedRequest.accommodation.roomType || 'Faculty Room'} • Allotted by Warden
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div style={{ color: '#B45309', fontWeight: 700 }}>⏳ Dispatched to Hostel Warden</div>
+                              <div style={{ fontSize: '0.72rem', color: '#92400E', marginTop: '2px' }}>
+                                Room assignment in progress
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 3: Mess Dining Passes */}
+                      <div
+                        style={{
+                          background: !trackedRequest.food?.selected
+                            ? '#F8FAFC'
+                            : trackedRequest.food?.cateringStatus === 'arranged'
+                            ? '#F0FDF4'
+                            : '#FFFBEB',
+                          border: !trackedRequest.food?.selected
+                            ? '1px dashed #CBD5E1'
+                            : trackedRequest.food?.cateringStatus === 'arranged'
+                            ? '1.5px solid #10B981'
+                            : '1.5px solid #F59E0B',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>🍽️</span>
+                          <strong style={{ fontSize: '0.875rem', color: '#0F172A' }}>
+                            3. Mess Dining Slip
+                          </strong>
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45 }}>
+                          {!trackedRequest.food?.selected ? (
+                            <div style={{ color: '#64748B', fontSize: '0.75rem' }}>Mess Dining Not Requested</div>
+                          ) : trackedRequest.clearanceStatus !== 'approved' ? (
+                            <div style={{ color: '#92400E', fontSize: '0.75rem' }}>Awaiting Super Admin clearance</div>
+                          ) : trackedRequest.food?.cateringStatus === 'arranged' ? (
+                            <>
+                              <div style={{ color: '#047857', fontWeight: 700 }}>✓ Dining Pass Issued</div>
+                              <div style={{ fontSize: '0.72rem', color: '#065F46', marginTop: '2px' }}>
+                                {trackedRequest.food.mealsRequired?.join(', ') || 'Meals'} ({trackedRequest.food.dietaryPreference || 'Veg'})
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div style={{ color: '#B45309', fontWeight: 700 }}>⏳ Dispatched to Mess Desk</div>
+                              <div style={{ fontSize: '0.72rem', color: '#92400E', marginTop: '2px' }}>
+                                Meal coupon preparation in progress
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Step 4: Gate Shuttle & Transit */}
+                      <div
+                        style={{
+                          background: !trackedRequest.transport?.selected
+                            ? '#F8FAFC'
+                            : trackedRequest.transport?.allocatedDriver
+                            ? '#F0FDF4'
+                            : '#FFFBEB',
+                          border: !trackedRequest.transport?.selected
+                            ? '1px dashed #CBD5E1'
+                            : trackedRequest.transport?.allocatedDriver
+                            ? '1.5px solid #10B981'
+                            : '1.5px solid #F59E0B',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '1.25rem' }}>🚗</span>
+                          <strong style={{ fontSize: '0.875rem', color: '#0F172A' }}>
+                            4. Campus Gate Transit
+                          </strong>
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#334155', lineHeight: 1.45 }}>
+                          {!trackedRequest.transport?.selected ? (
+                            <div style={{ color: '#64748B', fontSize: '0.75rem' }}>Own Conveyance (No Shuttle)</div>
+                          ) : trackedRequest.clearanceStatus !== 'approved' ? (
+                            <div style={{ color: '#92400E', fontSize: '0.75rem' }}>Awaiting Super Admin clearance</div>
+                          ) : trackedRequest.transport?.allocatedDriver ? (
+                            <>
+                              <div style={{ color: '#047857', fontWeight: 700 }}>✓ Shuttle Confirmed</div>
+                              <div style={{ fontSize: '0.72rem', color: '#065F46', marginTop: '2px' }}>
+                                Driver: {trackedRequest.transport.allocatedDriver} {trackedRequest.transport.driverPhone ? `(📞 ${trackedRequest.transport.driverPhone})` : ''}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div style={{ color: '#B45309', fontWeight: 700 }}>⏳ Dispatched to Fleet Desk</div>
+                              <div style={{ fontSize: '0.72rem', color: '#92400E', marginTop: '2px' }}>
+                                Pickup: {trackedRequest.transport.pickupLocation || 'Main Gate'}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 
-                  <div className="responsive-form-grid" style={{ marginBottom: '1.25rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Visitor Name</div>
-                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trackedRequest.guestName}</div>
-                      <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>{trackedRequest.designation || 'Visitor'}</div>
+                  {/* OFFICIAL DIGITAL GATE PASS (PRINTABLE) */}
+                  <div
+                    id="printable-gate-pass"
+                    style={{
+                      border: '2px solid #1E3A8A',
+                      borderRadius: '10px',
+                      background: '#FFFFFF',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 18px rgba(30, 58, 138, 0.08)',
+                    }}
+                  >
+                    {/* Header Ribbon */}
+                    <div
+                      style={{
+                        background: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)',
+                        color: '#FFFFFF',
+                        padding: '1.25rem 1.5rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ fontSize: '2rem' }}>🏛️</div>
+                        <div>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.04em' }}>
+                            CT UNIVERSITY • OFFICIAL DIGITAL ENTRY PASS
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#93C5FD' }}>
+                            Campus Visitor Clearance & Hospitality Facility Permit • Dept of CSE
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.6875rem', color: '#CBD5E1', textTransform: 'uppercase' }}>
+                          Official Reference Code
+                        </div>
+                        <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FCD34D', letterSpacing: '0.05em' }}>
+                          {trackedRequest.referenceCode}
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Institution / Home Org</div>
-                      <div style={{ fontWeight: 600, color: '#0F172A' }}>{trackedRequest.institution || 'External'}</div>
-                      <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>{trackedRequest.guestEmail}</div>
-                    </div>
+                    {/* Pass Body */}
+                    <div style={{ padding: '1.5rem' }}>
+                      <div className="responsive-form-grid" style={{ marginBottom: '1.25rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Visitor Full Name</div>
+                          <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>{trackedRequest.guestName}</div>
+                          <div style={{ fontSize: '0.8125rem', color: '#475569' }}>{trackedRequest.designation || 'Visitor'}</div>
+                        </div>
 
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Allocated Room Number</div>
-                      <div style={{ fontWeight: 700, color: trackedRequest.accommodation?.allocatedRoom ? '#059669' : '#92400E', fontSize: '1.05rem' }}>
-                        {trackedRequest.accommodation?.allocatedRoom || (trackedRequest.accommodation?.selected ? 'Under Allotment' : 'Day Visit (No Room)')}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                        {trackedRequest.accommodation?.roomType || 'Standard'}
-                      </div>
-                    </div>
+                        <div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Home Institution / Organization</div>
+                          <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>{trackedRequest.institution || 'External'}</div>
+                          <div style={{ fontSize: '0.8125rem', color: '#475569' }}>✉️ {trackedRequest.guestEmail}</div>
+                        </div>
 
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Mess Meal Slip</div>
-                      <div style={{ fontWeight: 600, color: '#0F172A' }}>
-                        {trackedRequest.food?.selected ? `${trackedRequest.food.mealsRequired?.join(', ')} (${trackedRequest.food.dietaryPreference})` : 'Not Requested'}
+                        <div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Campus Clearance Decision</div>
+                          <div style={{ fontSize: '1rem', fontWeight: 800, color: trackedRequest.clearanceStatus === 'approved' ? '#059669' : '#D97706' }}>
+                            {trackedRequest.clearanceStatus === 'approved' ? '✓ CLEARED FOR GATE ENTRY' : '⏳ PENDING DEAN CLEARANCE'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            {trackedRequest.clearedBy ? `Approved by ${trackedRequest.clearedBy}` : 'Dean Office queue'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Allocated Hostel Room</div>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: trackedRequest.accommodation?.allocatedRoom ? '#059669' : '#D97706' }}>
+                            {trackedRequest.accommodation?.allocatedRoom || (trackedRequest.accommodation?.selected ? 'Under Allotment' : 'Day Visit (No Room)')}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            {trackedRequest.accommodation?.selected ? `Check-In: ${trackedRequest.accommodation.checkInDate || 'Arrival'}` : 'N/A'}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#059669' }}>
-                        {trackedRequest.food?.selected ? 'Eligible for Mess Dining' : ''}
+
+                      {/* Official Host and Purpose Details */}
+                      <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px 14px', borderRadius: '6px', fontSize: '0.8125rem', color: '#334155', marginBottom: '1.25rem' }}>
+                        <strong>Host Department & Official Purpose:</strong> {trackedRequest.purposeOfVisit || 'Campus Academic Duty'}
+                      </div>
+
+                      {/* Facility Summary Table */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', padding: '12px', background: '#EFF6FF', borderRadius: '6px', border: '1px solid #BFDBFE', fontSize: '0.8125rem' }}>
+                        <div>
+                          <span style={{ color: '#1E40AF', fontWeight: 600 }}>Mess Dining Pass:</span><br/>
+                          <strong>{trackedRequest.food?.selected ? `${trackedRequest.food.mealsRequired?.join(', ') || 'Meals'} (${trackedRequest.food.cateringStatus === 'arranged' ? 'Pass Issued' : 'Pending'})` : 'Not Requested'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#1E40AF', fontWeight: 600 }}>Gate Shuttle / Pickup:</span><br/>
+                          <strong>{trackedRequest.transport?.selected ? `${trackedRequest.transport.pickupLocation || 'Main Gate'} (${trackedRequest.transport.allocatedDriver ? 'Driver: ' + trackedRequest.transport.allocatedDriver : 'Pending Fleet'})` : 'Own Conveyance'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: '#1E40AF', fontWeight: 600 }}>Security Verification:</span><br/>
+                          <strong>Photo ID Required at Gate</strong>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                          Show this reference code or digital pass at the University Main Security Gate.
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => copyToClipboard(trackedRequest.referenceCode)}
+                          >
+                            {copiedCode ? <CheckIcon size={12} color="#059669" /> : <CopyIcon size={12} />}
+                            <span>{copiedCode ? 'Copied' : 'Copy Reference Code'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{ background: '#1E3A8A' }}
+                            onClick={() => window.print()}
+                          >
+                            <span>🖨️ Print Digital Entry Pass</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ background: '#F8FAFC', padding: '10px 14px', borderRadius: '6px', fontSize: '0.8125rem', color: '#475569' }}>
-                    <strong>Official Purpose:</strong> {trackedRequest.purposeOfVisit || 'Campus Visit & Academic Duty'}
-                  </div>
-
-                  <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => window.print()}>
-                      Print Gate Pass
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

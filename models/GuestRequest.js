@@ -42,6 +42,26 @@ const guestRequestSchema = new mongoose.Schema({
     unique: true,
   },
 
+  // 0. Super Admin University Clearance Gatekeeper
+  clearanceStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true,
+  },
+  clearedBy: {
+    type: String,
+    default: '',
+  },
+  clearanceNotes: {
+    type: String,
+    default: '',
+  },
+  clearedAt: {
+    type: Date,
+    default: null,
+  },
+
   // 1. Accommodation Requirement
   accommodation: {
     selected: { type: Boolean, default: false },
@@ -129,7 +149,7 @@ const guestRequestSchema = new mongoose.Schema({
 
 guestRequestSchema.pre('save', function (next) {
   if (!this.referenceCode) {
-    this.referenceCode = 'REQ-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
+    this.referenceCode = 'CTU-VIS-' + Math.floor(10000 + Math.random() * 90000);
   }
   this.updatedAt = Date.now();
   next();

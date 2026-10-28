@@ -7,6 +7,7 @@ const VerifiedStaff = require('../models/VerifiedStaff');
 const LeisureService = require('../models/LeisureService');
 const Booking = require('../models/Booking');
 const GuestRequest = require('../models/GuestRequest');
+const emailService = require('../services/emailService');
 const { verifySuperAdmin } = require('../middleware/auth');
 
 // All routes in this router require Super Admin credentials
@@ -1209,21 +1210,118 @@ router.put('/departments/requests/:id/assign', async (req, res) => {
   }
 });
 
-// @route   DELETE /api/admin/departments/requests/:id
-// @desc    Delete a guest request
-router.delete('/departments/requests/:id', async (req, res) => {
+// =========================================================================
+// VISITOR CLEARANCE & APPROVALS (DEAN / SUPER ADMIN GATEKEEPER)
+// =========================================================================
+
+// @route   GET /api/admin/clearance/stats
+// @desc    Get clearance counts (Pending, Approved, Rejected, Total)
+router.get('/clearance/stats', async (req, res) => {
   try {
-    const deleted = await GuestRequest.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, message: 'Request not found.' });
-    }
+    const total = await GuestRequest.countDocuments();
+    const pending = await GuestRequest.countDocuments({ clearanceStatus: 'pending' });
+    const approved = await GuestRequest.countDocuments({ clearanceStatus: 'approved' });
+    const rejected = await GuestRequest.countDocuments({ clearanceStatus: 'rejected' });
+
     return res.json({
       success: true,
-      message: `Expunged guest request ${deleted.referenceCode} for ${deleted.guestName}.`,
+      stats: { total, pending, approved, rejected },
     });
   } catch (error) {
+    console.error('Clearance stats error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
+});
+
+// @route   GET /api/admin/clearance/requests
+// @desc    Get visitor requests with clearance filter (all, pending, approved, rejected) and search
+router.get('/clearance/requests', async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    let filter = {};
+
+    if (status && status !== 'all') {
+      filter.clearanceStatus = status;
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      filter.$or = [
+        { guestName: { $regex: q, $options: 'i' } },
+        { guestEmail: { $regex: q, $options: 'i' } },
+        { guestPhone: { $regex: q, $options: 'i' } },
+        { institution: { $regex: q, $options: 'i' } },
+        { designation: { $regex: q, $options: 'i' } },
+        { referenceCode: { $regex: q, $options: 'i' } },
+      ];
+    }
+
+    const requests = await GuestRequest.find(filter).sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: requests.length,
+      requests,
+    });
+  } catch (error) {
+    console.error('Clearance requests error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @route   PUT /api/admin/clearance/requests/:id/decision
+// @desc    Super Admin decision on visitor clearance (Approved / Rejected) + automated email dispatch
+router.put('/clearance/requests/:id/decision', async (req, res) => {
+  try {
+    const { decision, notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid clearance decision. Must be either "approved" or "rejected".',
+      });
+    }
+
+    const request = await GuestRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Visitor request not found.' });
+    }
+
+    request.clearanceStatus = decision;
+    request.clearedBy = req.user?.name || 'Super Administrator (Dean Office)';
+    request.clearanceNotes = (notes || '').trim();
+    request.clearedAt = new Date();
+    request.updatedAt = new Date();
+
+    await request.save();
+
+    // Trigger automated email dispatch to the visitor
+    emailService
+      .sendClearanceDecisionEmail(request, decision, request.clearanceNotes)
+      .catch((err) => {
+        console.error('Warning: Decision email delivery failed:', err.message);
+      });
+
+    const actionText = decision === 'approved' ? 'Approved & Dispatched to Caretakers' : 'Rejected';
+
+    return res.json({
+      success: true,
+      message: `Visitor clearance request #${request.referenceCode} for "${request.guestName}" has been ${actionText}. Email notification sent.`,
+      request,
+    });
+  } catch (error) {
+    console.error('Clearance decision error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @route   GET /api/admin/email-logs
+// @desc    Audit history of dispatched emails
+router.get('/email-logs', (req, res) => {
+  return res.json({
+    success: true,
+    logs: emailService.getRecentEmailLogs(),
+  });
 });
 
 module.exports = router;
