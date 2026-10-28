@@ -69,7 +69,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
   // Facility C: Transport / Campus Shuttle
   const [reqTransport, setReqTransport] = useState(false);
-  const [pickupLoc, setPickupLoc] = useState('University Main Gate');
+  const [pickupLoc, setPickupLoc] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [transportNotes, setTransportNotes] = useState('');
 
@@ -134,6 +134,12 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
     // Validation 3: If Mess is requested, at least one meal must be selected
     if (reqFood && meals.length === 0) {
       setFormError('Since you requested Hostel Mess Dining, please select at least one meal (Breakfast, Lunch, or Dinner).');
+      return;
+    }
+
+    // Validation 4: If Transport is requested, pickup point is required
+    if (reqTransport && !pickupLoc.trim()) {
+      setFormError('Since you requested Campus Shuttle / Transit, please enter your desired Pickup Point or Address.');
       return;
     }
 
@@ -933,17 +939,29 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                         <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
                           <div className="responsive-form-grid">
                             <div>
-                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>Pickup Point</label>
-                              <select
+                              <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>
+                                Pickup Point / Address *
+                              </label>
+                              <input
+                                type="text"
                                 className="input-text"
+                                list="pickup-location-suggestions"
+                                placeholder="Enter custom pickup point or select..."
                                 value={pickupLoc}
                                 onChange={(e) => setPickupLoc(e.target.value)}
-                              >
-                                <option value="University Main Gate">University Main Security Gate</option>
-                                <option value="Campus Bus Terminal">Campus Bus Terminal</option>
-                                <option value="Railway Station (City)">Ludhiana Railway Station (Examiner Duty)</option>
-                                <option value="Inter-State Bus Terminal (ISBT)">Inter-State Bus Terminal (ISBT)</option>
-                              </select>
+                                required={reqTransport}
+                              />
+                              <datalist id="pickup-location-suggestions">
+                                <option value="University Main Security Gate" />
+                                <option value="Campus Bus Terminal" />
+                                <option value="Ludhiana City Railway Station" />
+                                <option value="Inter-State Bus Terminal (ISBT)" />
+                                <option value="Chandigarh Airport (IXC)" />
+                                <option value="Department Front Porch" />
+                              </datalist>
+                              <span style={{ fontSize: '0.72rem', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                                Type any custom pickup location, hotel, or gate.
+                              </span>
                             </div>
 
                             <div>
