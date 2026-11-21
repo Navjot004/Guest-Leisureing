@@ -80,8 +80,11 @@ Guest Leisureing/
 ├── client/                               # React + TypeScript Frontend Application
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── MainHeader.tsx            # Unified top header with CT University branding & slide toggle
-│   │   │   ├── Sidebar.tsx               # Slide navigation drawer (Campus Intake, Caretaker, Admin)
+│   │   │   ├── MainHeader.tsx            # Unified top header with CT University branding
+│   │   │   ├── VerifiedStaffTab.tsx      # Staff directory management & Excel roster viewer
+│   │   │   ├── VisitorClearanceTab.tsx   # Visitor queue & Dean approval workflows
+│   │   │   ├── ManageStaffTab.tsx        # Department role & designation controls
+│   │   │   ├── DepartmentsSection.tsx    # Campus services & accommodation department cards
 │   │   │   └── Icons.tsx                 # Zero-dependency SVG iconography library
 │   │   ├── pages/
 │   │   │   ├── HomePage.tsx              # Public Guest Intake, Tracking & Guidelines portal
@@ -229,14 +232,28 @@ npm install --prefix client
 ```
 
 ### Step 4: Configure Environment Variables
-Create or verify `.env` file in the root directory:
+Copy `.env.example` to create your `.env` file in the root directory:
+```powershell
+cp .env.example .env
+```
+Populate `.env` with your secure credentials:
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://princevegetasaiyan01234_db_user:navjot1234@navjot.4m1pws3.mongodb.net/guest_leisureing?retryWrites=true&w=majority
-JWT_SECRET=ct_university_guest_portal_secret_key_2026
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/guest_leisureing?retryWrites=true&w=majority
+JWT_SECRET=your_secure_jwt_secret_key
 SUPER_ADMIN_ID=10001
-SUPER_ADMIN_PASSWORD=Master@2026
+SUPER_ADMIN_PASSWORD=your_super_admin_secure_password
+CLIENT_URL=http://localhost:5173
+
+# Optional Live SMTP Email Settings (runs in simulated mode if omitted)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@ctu.edu.in
+SMTP_PASS=your_email_app_password
 ```
+
+> ⚠️ **Security Notice:** Never commit live database passwords, API tokens, or secrets to Git. The `.gitignore` is pre-configured to exclude `.env`.
 
 ### Step 5: Start Development Server
 Run backend API and frontend Vite server concurrently:
@@ -255,10 +272,10 @@ The system will start:
 
 | Role | Username / ID / Email | Password | Primary Function |
 |---|---|---|---|
-| **Super Admin** | `10001` *(or super admin email)* | `Master@2026` | Master administrative console & roster upload |
-| **Hostel Caretaker** | `accommodation.staff@test.com` | `password123` | Room allotment & hostel guest intake |
-| **Mess In-Charge** | `catering.staff@test.com` | `password123` | Hostel mess passes & dining slips |
-| **Transport Desk** | `transport.staff@test.com` | `password123` | University gate shuttle coordination |
+| **Super Admin** | `10001` *(or super admin email)* | Configured in `.env` (`SUPER_ADMIN_PASSWORD`) | Master administrative console & roster upload |
+| **Hostel Caretaker** | `accommodation.staff@test.com` | Configured on staff account creation | Room allotment & hostel guest intake |
+| **Mess In-Charge** | `catering.staff@test.com` | Configured on staff account creation | Hostel mess passes & dining slips |
+| **Transport Desk** | `transport.staff@test.com` | Configured on staff account creation | University gate shuttle coordination |
 | **Visiting Guest** | *(No credentials needed)* | *(N/A)* | Submit form and track using Reference Code |
 
 ---
