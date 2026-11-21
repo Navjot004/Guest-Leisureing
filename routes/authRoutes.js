@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
         message: 'Super Admin authentication verified successfully!',
         token,
         user: superAdminPayload,
-        redirectUrl: '/admin-dashboard.html',
+        redirectUrl: '/super-admin',
       });
     }
 
@@ -100,12 +100,17 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 
+    const userRedirect =
+      payload.isDeptAdmin || payload.role === 'dept_admin' || payload.role === 'staff'
+        ? '/dept-admin'
+        : '/guest-dashboard';
+
     return res.json({
       success: true,
       message: `Welcome back, ${user.name}!`,
       token,
       user: payload,
-      redirectUrl: '/guest-dashboard.html',
+      redirectUrl: userRedirect,
     });
   } catch (error) {
     console.error('Login error:', error);

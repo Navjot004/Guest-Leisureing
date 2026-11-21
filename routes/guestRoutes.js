@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const LeisureService = require('../models/LeisureService');
 const { verifyToken } = require('../middleware/auth');
@@ -27,7 +28,7 @@ router.post('/', async (req, res) => {
 
     const count = Number(guestsCount) || 1;
     const totalAmount = service.price * count;
-    const bookingReference = 'GL-' + Date.now().toString().slice(-6) + '-' + Math.floor(100 + Math.random() * 900);
+    const bookingReference = 'GL-' + Date.now().toString().slice(-6) + '-' + crypto.randomBytes(3).toString('hex').toUpperCase();
 
     const booking = new Booking({
       user: req.user.id,

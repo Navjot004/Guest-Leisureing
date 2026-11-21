@@ -65,7 +65,7 @@ const verifiedStaffSchema = new mongoose.Schema({
   },
 });
 
-// Index to prevent duplicate staff IDs within the same category
-verifiedStaffSchema.index({ staffId: 1, email: 1 }, { unique: false });
+// Indexes for optimal lookup performance
+verifiedStaffSchema.index({ staffId: 1, category: 1 });
 
 module.exports = mongoose.model('VerifiedStaff', verifiedStaffSchema);

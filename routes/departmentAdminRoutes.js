@@ -61,56 +61,62 @@ router.get('/:department/stats', ensureDepartmentScope, async (req, res) => {
     const baseFilter = { clearanceStatus: 'approved' };
 
     if (dept === 'accommodation') {
-      total = await GuestRequest.countDocuments({ ...baseFilter, 'accommodation.selected': true });
-      pending = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'accommodation.selected': true,
-        'accommodation.status': 'pending',
-      });
-      inProgress = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'accommodation.selected': true,
-        'accommodation.status': 'allocated',
-      });
-      completed = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'accommodation.selected': true,
-        'accommodation.status': 'completed',
-      });
+      [total, pending, inProgress, completed] = await Promise.all([
+        GuestRequest.countDocuments({ ...baseFilter, 'accommodation.selected': true }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'accommodation.selected': true,
+          'accommodation.status': 'pending',
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'accommodation.selected': true,
+          'accommodation.status': 'allocated',
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'accommodation.selected': true,
+          'accommodation.status': 'completed',
+        }),
+      ]);
     } else if (dept === 'catering') {
-      total = await GuestRequest.countDocuments({ ...baseFilter, 'food.selected': true });
-      pending = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'food.selected': true,
-        'food.cateringStatus': 'pending',
-      });
-      inProgress = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'food.selected': true,
-        'food.cateringStatus': 'arranged',
-      });
-      completed = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'food.selected': true,
-        'food.cateringStatus': 'completed',
-      });
+      [total, pending, inProgress, completed] = await Promise.all([
+        GuestRequest.countDocuments({ ...baseFilter, 'food.selected': true }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'food.selected': true,
+          'food.cateringStatus': 'pending',
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'food.selected': true,
+          'food.cateringStatus': 'arranged',
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'food.selected': true,
+          'food.cateringStatus': 'completed',
+        }),
+      ]);
     } else if (dept === 'transport') {
-      total = await GuestRequest.countDocuments({ ...baseFilter, 'transport.selected': true });
-      pending = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'transport.selected': true,
-        'transport.status': 'pending',
-      });
-      inProgress = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'transport.selected': true,
-        'transport.status': { $in: ['assigned', 'in_transit'] },
-      });
-      completed = await GuestRequest.countDocuments({
-        ...baseFilter,
-        'transport.selected': true,
-        'transport.status': 'completed',
-      });
+      [total, pending, inProgress, completed] = await Promise.all([
+        GuestRequest.countDocuments({ ...baseFilter, 'transport.selected': true }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'transport.selected': true,
+          'transport.status': 'pending',
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'transport.selected': true,
+          'transport.status': { $in: ['assigned', 'in_transit'] },
+        }),
+        GuestRequest.countDocuments({
+          ...baseFilter,
+          'transport.selected': true,
+          'transport.status': 'completed',
+        }),
+      ]);
     }
 
     return res.json({

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const guestRequestSchema = new mongoose.Schema({
   user: {
@@ -149,7 +150,8 @@ const guestRequestSchema = new mongoose.Schema({
 
 guestRequestSchema.pre('save', function (next) {
   if (!this.referenceCode) {
-    this.referenceCode = 'CTU-VIS-' + Math.floor(10000 + Math.random() * 90000);
+    const randomSuffix = crypto.randomBytes(4).toString('hex').toUpperCase();
+    this.referenceCode = 'CTU-VIS-' + randomSuffix;
   }
   this.updatedAt = Date.now();
   next();

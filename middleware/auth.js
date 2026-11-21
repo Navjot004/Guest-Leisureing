@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_guest_leisureing_jwt_key_2026_luxury_secure';
+const SUPER_ADMIN_ID = process.env.SUPER_ADMIN_ID || '10001';
 
 // Middleware to verify any authenticated token
 function verifyToken(req, res, next) {
@@ -20,10 +21,10 @@ function verifyToken(req, res, next) {
   }
 }
 
-// Middleware to ensure requester is Super Admin (Hardcoded ID 10001)
+// Middleware to ensure requester is Super Admin
 function verifySuperAdmin(req, res, next) {
   verifyToken(req, res, () => {
-    if (req.user && req.user.role === 'superadmin' && req.user.id === '10001') {
+    if (req.user && (req.user.role === 'superadmin' || req.user.isSuperAdmin === true) && (req.user.id === SUPER_ADMIN_ID || req.user.id === '10001')) {
       next();
     } else {
       return res.status(403).json({ 
@@ -41,7 +42,7 @@ function verifyDeptAdminOrSuperAdmin(req, res, next) {
       return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
     }
     const isSuperAdmin =
-      (req.user.role === 'superadmin' && (req.user.id === '10001' || req.user.id === '10001')) ||
+      (req.user.role === 'superadmin' && (req.user.id === SUPER_ADMIN_ID || req.user.id === '10001')) ||
       req.user.isSuperAdmin === true;
     const isDeptAdmin =
       req.user.role === 'dept_admin' ||

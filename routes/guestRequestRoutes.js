@@ -127,9 +127,12 @@ router.get('/track/:referenceCode', async (req, res) => {
       });
     }
 
+    // Safely escape special regex characters to prevent ReDoS / Regex Injection
+    const escapedQuery = rawQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     // Try finding by referenceCode first (case-insensitive) or by email
     let request = await GuestRequest.findOne({
-      referenceCode: { $regex: new RegExp(`^${rawQuery}$`, 'i') },
+      referenceCode: { $regex: new RegExp(`^${escapedQuery}$`, 'i') },
     });
 
     if (!request && rawQuery.includes('@')) {
