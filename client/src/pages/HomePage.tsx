@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { User, GuestRequestItem } from '../types';
+import campusHeroImage from '../assets/campus-hero.png';
+import facultyTransitImage from '../assets/faculty-transit.svg';
+import hostelGuestImage from '../assets/hostel-guest.svg';
+import dormitoryImage from '../assets/dormitory.svg';
+import hostelMessImage from '../assets/hostel-mess.svg';
+import campusShuttleImage from '../assets/faculty-transit.png';
+import academicConferenceImage from '../assets/academic-conference.svg';
 import {
   SearchIcon,
   CheckCircleIcon,
@@ -274,72 +281,116 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
   };
 
   return (
-    <div style={{ padding: '1.5rem 1rem 3rem' }}>
-      <main style={{ maxWidth: '1080px', margin: '0 auto' }}>
+    <div className="ctu-public-page">
+      <main className="ctu-public-main">
         
-        {/* Official Institutional Banner Header */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #1E3A8A 0%, #172554 100%)',
-            color: '#FFFFFF',
-            borderRadius: '10px',
-            padding: '2rem 1.75rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 4px 15px rgba(30, 58, 138, 0.15)',
-          }}
+        {/* Public university hospitality landing area */}
+        <section
+          className="ctu-hero"
+          aria-labelledby="ctu-hero-heading"
+          style={{ backgroundImage: `linear-gradient(90deg, rgba(15, 35, 78, 0.96) 0%, rgba(15, 35, 78, 0.86) 58%, rgba(15, 35, 78, 0.45) 100%), url(${campusHeroImage})` }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ maxWidth: '720px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  marginBottom: '10px',
-                }}
-              >
-                <span>🏛️</span>
-                <span>CT UNIVERSITY • CAMPUS VISITOR CLEARANCE PORTAL</span>
-              </div>
-              <h1 style={{ fontSize: '1.65rem', fontWeight: 800, margin: '0 0 8px 0', lineHeight: 1.25 }}>
-                Official Campus Visit Clearance & Guest Facilities
-              </h1>
-              <p style={{ fontSize: '0.875rem', color: '#CBD5E1', margin: 0, lineHeight: 1.5 }}>
-                All outside academic visitors (External PhD/Viva Examiners, Visiting Faculty, Keynote Speakers, and Student Guardians) must obtain university visit clearance. You may optionally request transit accommodation in Faculty Quarters, hostel mess dining, and campus gate shuttle below.
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 600, textTransform: 'uppercase' }}>
-                Quick Actions
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{ background: '#FFFFFF', color: '#1E3A8A', fontWeight: 600, justifyContent: 'flex-start' }}
-                onClick={() => setActiveTab('track')}
-              >
-                <SearchIcon size={14} />
-                <span>Track Existing Entry Pass</span>
+          <div className="ctu-hero-copy">
+            <div className="ctu-hero-eyebrow">CT University • Ferozepur Road, Ludhiana</div>
+            <h1 id="ctu-hero-heading">Welcome to a Better Campus Stay.</h1>
+            <p>
+              Comfortable campus accommodation, nutritious hostel mess dining and reliable
+              university transportation for visiting academics and guests.
+            </p>
+            <div className="ctu-hero-actions">
+              <button type="button" className="ctu-primary-action" onClick={() => setActiveTab('apply')}>
+                <ShieldIcon size={16} />
+                <span>Apply for Stay</span>
               </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#FFFFFF', justifyContent: 'flex-start' }}
-                onClick={() => setActiveTab('guidelines')}
-              >
-                <ClockIcon size={14} />
-                <span>Hostel & Mess Rules</span>
+              <button type="button" className="ctu-secondary-action" onClick={() => setActiveTab('track')}>
+                <SearchIcon size={16} />
+                <span>Track Application</span>
               </button>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section className="ctu-stay-gallery" aria-labelledby="ctu-accommodation-heading">
+          <header className="ctu-editorial-heading">
+            <div>
+              <span>01 / Campus Accommodation</span>
+              <h2 id="ctu-accommodation-heading">Rest, work and arrive ready.</h2>
+            </div>
+            <p>Purposeful spaces for visiting examiners, guest faculty, parents and academic delegates.</p>
+          </header>
+          <div className="ctu-stay-mosaic">
+            <article className="ctu-feature-stay">
+              <img src={facultyTransitImage} alt="Faculty Transit Quarters room" />
+              <div className="ctu-image-caption">
+                <span>Featured stay</span>
+                <h3>Faculty Transit Quarters</h3>
+                <p>Study desk, Wi-Fi and a quiet attached-bathroom room.</p>
+              </div>
+            </article>
+            <article className="ctu-support-stay">
+              <img src={hostelGuestImage} alt="Hostel guest wing room" />
+              <div>
+                <span>Hostel Guest Wing</span>
+                <h3>Twin-room comfort</h3>
+              </div>
+            </article>
+            <article className="ctu-support-stay ctu-support-stay-tall">
+              <img src={dormitoryImage} alt="Common dormitory accommodation" />
+              <div>
+                <span>Group accommodation</span>
+                <h3>Common Dormitory</h3>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="ctu-dining-editorial">
+          <div className="ctu-dining-image">
+            <img src={hostelMessImage} alt="Vegetarian hostel mess dining experience" />
+          </div>
+          <div className="ctu-dining-copy">
+            <span>02 / Campus Dining</span>
+            <h2>Food that feels at home.</h2>
+            <p>Vegetarian hostel mess dining with breakfast, lunch and dinner meal passes coordinated by the campus mess desk.</p>
+            <button type="button" className="ctu-editorial-link" onClick={() => setActiveTab('apply')}>
+              Add mess meals <span>→</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="ctu-shuttle-editorial">
+          <img src={campusShuttleImage} alt="Campus gate shuttle" />
+          <aside>
+            <span>03 / Campus Transportation</span>
+            <h2>From gate to department.</h2>
+            <p>Coordinate an arrival shuttle or campus gate pickup with the transport desk.</p>
+            <button type="button" className="ctu-editorial-link" onClick={() => setActiveTab('apply')}>
+              Request a shuttle <span>→</span>
+            </button>
+          </aside>
+        </section>
+
+        <section className="ctu-visitors-editorial">
+          <div className="ctu-visitors-copy">
+            <span>04 / Academic Visitors</span>
+            <h2>For the people shaping the university.</h2>
+            <p>Clearance and campus services for external examiners, visiting faculty, conference delegates and academic guests.</p>
+          </div>
+          <img src={academicConferenceImage} alt="Academic conference and visiting scholars" />
+        </section>
+
+        <section className="ctu-facilities-editorial">
+          <header>
+            <span>05 / Campus Facilities</span>
+            <h2>Everything for a considered visit.</h2>
+          </header>
+          <div>
+            <article><small>01</small><h3>Transit lodging</h3><p>Faculty rooms and hostel guest wings.</p></article>
+            <article><small>02</small><h3>Hostel dining</h3><p>Breakfast, lunch and dinner passes.</p></article>
+            <article><small>03</small><h3>Gate shuttle</h3><p>Pickup and department transport.</p></article>
+            <article><small>04</small><h3>Visitor clearance</h3><p>Digital entry reference and tracking.</p></article>
+          </div>
+        </section>
 
         {/* Staff/Admin Directive Banner */}
         {isStaffOrAdmin && (
@@ -442,7 +493,20 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             TAB 1: OFFICIAL CAMPUS VISIT CLEARANCE & OPTIONAL FACILITIES
            ========================================================================= */}
         {activeTab === 'apply' && (
-          <div className="uni-card">
+          <div className="uni-card ctu-reservation-experience">
+            <div className="ctu-academic-visitor-strip">
+              <img src={academicConferenceImage} alt="Academic conference and visiting scholars" />
+              <div>
+                <span>Academic Visitor Services</span>
+                <strong>Campus clearance for examiners, guest faculty and delegates</strong>
+              </div>
+            </div>
+            <ol className="ctu-reservation-progress" aria-label="Application progress">
+              <li className="active"><span>01</span>Visitor details</li>
+              <li><span>02</span>Accommodation</li>
+              <li><span>03</span>Dining & transport</li>
+              <li><span>04</span>Review & submit</li>
+            </ol>
             {submitSuccess ? (
               <div style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
                 <div
@@ -651,6 +715,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                           <option value="Conference / Seminar Delegate">Conference / Seminar Delegate</option>
                           <option value="Sports / University Team Member">Sports / University Team Member</option>
                           <option value="Official Academic / Regulatory Guest">Official Academic / Regulatory Guest</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
 
@@ -669,7 +734,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
                       <div>
                         <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                          Host Department at CT University *
+                          Host Department*
                         </label>
                         <input
                           type="text"
@@ -1092,7 +1157,11 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             TAB 2: TRACK APPLICATION / CHECK-IN PASS
            ========================================================================= */}
         {activeTab === 'track' && (
-          <div className="uni-card">
+          <div className="uni-card ctu-tracking-experience">
+            <header className="ctu-tracking-header">
+              <span>Visitor Services / Track</span>
+              <h2>Follow your campus visit.</h2>
+            </header>
             <div className="uni-card-header">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
                 Track Campus Entry Pass & Allotment Status
@@ -1532,7 +1601,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             TAB 3: HOSTEL & MESS GUIDELINES
            ========================================================================= */}
         {activeTab === 'guidelines' && (
-          <div className="uni-card">
+          <div className="uni-card ctu-guidelines-experience">
             <div className="uni-card-header">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
                 CT University • Campus Visitor & Hostel Guidelines
@@ -1611,6 +1680,17 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
             </div>
           </div>
         )}
+
+        <footer className="ctu-footer">
+          <div>
+            <strong>CT University</strong>
+            <span>Campus Lodging & Hostel Mess Portal</span>
+          </div>
+          <div>
+            <span>Ferozepur Road, Ludhiana, Punjab</span>
+            <span>Department of Computer Science & Engineering</span>
+          </div>
+        </footer>
 
       </main>
     </div>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Vegetarian hostel mess placeholder">
+  <rect width="800" height="500" fill="#ECFDF5"/>
+  <rect x="80" y="80" width="640" height="340" rx="24" fill="#F8FAFC" stroke="#A7F3D0" stroke-width="12"/>
+  <ellipse cx="400" cy="300" rx="230" ry="100" fill="#CBD5E1"/>
+  <ellipse cx="400" cy="285" rx="210" ry="82" fill="#D4A84F"/>
+  <g fill="#22C55E"><circle cx="340" cy="270" r="35"/><circle cx="420" cy="250" r="30"/><circle cx="470" cy="300" r="38"/></g>
+  <g fill="#F59E0B"><circle cx="300" cy="310" r="24"/><circle cx="390" cy="320" r="28"/></g>
+  <rect x="310" y="115" width="180" height="42" rx="21" fill="#065F46"/>
+</svg>

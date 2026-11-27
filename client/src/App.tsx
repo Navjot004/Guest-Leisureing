@@ -22,9 +22,27 @@ const AuthLayout: React.FC<{
   children: React.ReactNode;
 }> = ({ activeTab, children }) => {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+  );
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    localStorage.setItem('ctu-theme', nextTheme);
+  };
 
   return (
     <div className="auth-viewport">
+      <button
+        type="button"
+        className="auth-theme-toggle theme-toggle"
+        onClick={toggleTheme}
+        aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      >
+        {theme === 'light' ? '☾' : '☀'}
+      </button>
       {/* Return to Guest Portal link */}
       <div style={{ marginBottom: '1.25rem', textAlign: 'center' }}>
         <button
