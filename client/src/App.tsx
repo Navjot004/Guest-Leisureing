@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { HomePage } from './pages/HomePage';
+import { AboutPage } from './pages/AboutPage';
 import { GuestDashboardPage } from './pages/GuestDashboardPage';
 import { DepartmentAdminPortal } from './pages/DepartmentAdminPortal';
 import { LockIcon, UserPlusIcon, ShieldIcon } from './components/Icons';
@@ -226,6 +227,24 @@ const AppRoutes: React.FC = () => {
           element={
             <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
               <HomePage currentUser={currentUser} onLogout={handleLogout} />
+            </PortalLayout>
+          }
+        />
+
+        <Route
+          path="/about"
+          element={
+            <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
+              <AboutPage />
+            </PortalLayout>
+          }
+        />
+
+        <Route
+          path="/track"
+          element={
+            <PortalLayout currentUser={currentUser} onLogout={handleLogout}>
+              <HomePage currentUser={currentUser} onLogout={handleLogout} view="tracking" />
             </PortalLayout>
           }
         />

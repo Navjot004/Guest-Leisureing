@@ -444,6 +444,62 @@ async function sendStaffProvisionedEmail({ staffName, staffEmail, staffId, depar
   });
 }
 
+
+async function sendOTPEmail({ to, otp }) {
+  if (!transporter) {
+    throw new Error(
+      'SMTP is not configured. Please check your backend .env file.'
+    );
+  }
+
+  const html = createEmailTemplate({
+    title: 'Verify Your Email Address',
+    subtitle: 'Welcome to CT University Campus Visitor Portal.',
+    bodyHtml: `
+      <p>Your email verification OTP is:</p>
+
+      <div style="
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+        margin: 20px 0;
+      ">
+        <strong style="
+          font-size: 32px;
+          letter-spacing: 10px;
+          color: #1E3A8A;
+        ">${otp}</strong>
+      </div>
+
+      <p>This OTP is valid for <strong>5 minutes</strong>.</p>
+      <p>Do not share this code with anyone.</p>
+
+      <p>If you did not request this verification, please ignore this email.</p>
+    `,
+  });
+
+  const from =
+    process.env.EMAIL_FROM ||
+    '"CT University Campus Desk" <noreply@ctuniversity.in>';
+
+  const info = await transporter.sendMail({
+    from,
+    to,
+    subject: '[CT University] Your Email Verification OTP',
+    html,
+  });
+
+  console.log('OTP email sent:', info.messageId);
+
+  return {
+    success: true,
+    messageId: info.messageId,
+  };
+}
+
+
 function getRecentEmailLogs() {
   return emailAuditLogs;
 }
@@ -453,5 +509,6 @@ module.exports = {
   sendClearanceDecisionEmail,
   sendFacilityUpdateEmail,
   sendStaffProvisionedEmail,
+  sendOTPEmail,
   getRecentEmailLogs,
 };

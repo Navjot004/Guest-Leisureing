@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import type { User, GuestRequestItem } from '../types';
+import { StaffNotice } from '../components/StaffNotice';
 import {
   BedIcon,
   UtensilsIcon,
@@ -311,6 +312,7 @@ export const DepartmentAdminPortal: React.FC<DepartmentAdminPortalProps> = ({
   return (
     <div style={{ background: 'var(--canvas)', minHeight: '100vh', padding: '1.5rem 1rem' }}>
       <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
+        <StaffNotice currentUser={currentUser} />
         {/* Top Header Card */}
         <div className="uni-card" style={{ marginBottom: '1.25rem', padding: '1.25rem 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>

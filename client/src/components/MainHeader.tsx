@@ -47,17 +47,25 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           <>
             <button
               type="button"
-              className="portal-nav-pill"
-              onClick={() => navigate('/?tab=track')}
+              className={`portal-nav-pill ${location.pathname === '/about' ? 'active' : ''}`}
+              onClick={() => navigate('/about')}
             >
-              <SearchIcon size={14} />
-              <span>Track Entry Pass</span>
+              <span>About</span>
             </button>
 
             <button
               type="button"
-              className="portal-nav-pill"
-              onClick={() => navigate('/?tab=guidelines')}
+              className={`portal-nav-pill ${location.pathname === '/track' ? 'active' : ''}`}
+              onClick={() => navigate('/track')}
+            >
+              <SearchIcon size={14} />
+              <span>Track Application</span>
+            </button>
+
+            <button
+              type="button"
+              className={`portal-nav-pill ${location.pathname === '/about' && location.hash === '#visitor-guidelines' ? 'active' : ''}`}
+              onClick={() => navigate('/about#visitor-guidelines')}
             >
               <span>🕒 Campus Visitor Guidelines</span>
             </button>

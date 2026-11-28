@@ -19,8 +19,105 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [callout, setCallout] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+const [otpVerified, setOtpVerified] = useState(false);
+const [verifying, setVerifying] = useState(false);
+const [verificationToken, setVerificationToken] = useState('');
+
+ const sendOTP = async () => {
+  if (!email.trim()) {
+    setCallout({
+      type: 'error',
+      text: 'Please enter your email address.',
+    });
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setCallout(null);
+
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || 'Failed to send OTP.');
+    }
+
+    setOtpSent(true);
+    setOtpVerified(false);
+    setVerificationToken('');
+    setOtp('');
+
+    setCallout({
+      type: 'success',
+      text: data.message || 'OTP sent successfully. Check your email.',
+    });
+  } catch (err: any) {
+    setCallout({ type: 'error', text: err.message });
+  } finally {
+    setLoading(false);
+  }
+};
+
+const verifyOTP = async () => {
+  if (otp.length !== 6) {
+    setCallout({
+      type: 'error',
+      text: 'Please enter the complete 6-digit OTP.',
+    });
+    return;
+  }
+
+  try {
+    setVerifying(true);
+    setCallout(null);
+
+    const res = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        otp,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success || !data.verificationToken) {
+      throw new Error(data.message || 'Invalid OTP.');
+    }
+
+    setOtpVerified(true);
+    setVerificationToken(data.verificationToken);
+
+    setCallout({
+      type: 'success',
+      text: 'Email verified successfully!',
+    });
+  } catch (err: any) {
+    setCallout({ type: 'error', text: err.message });
+  } finally {
+    setVerifying(false);
+  }
+};
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+if (!otpVerified || !verificationToken) {
+  setCallout({
+    type: 'error',
+    text: 'Please verify your email before registration.',
+  });
+  return;
+}
+
     if (!name.trim() || !email.trim() || !password.trim()) {
       setCallout({ type: 'error', text: 'Full Name, Email, and Password are required.' });
       return;
@@ -44,6 +141,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           password: password.trim(),
           phone: phone.trim(),
           role: 'guest',
+          verificationToken,
         }),
       });
 
@@ -123,11 +221,66 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
             className="text-input mono"
             placeholder="e.g. jane.smith@example.org"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+  setEmail(e.target.value);
+  setOtpSent(false);
+  setOtpVerified(false);
+  setVerificationToken('');
+  setOtp('');
+}}
             required
             autoComplete="email"
           />
+          <button
+  type="button"
+  className="btn btn-md btn-primary btn-full"
+  disabled={loading}
+  onClick={sendOTP}
+  style={{ marginTop: '0.75rem' }}
+>
+  {loading ? (
+    'Sending OTP...'
+  ) : (
+    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+      <CheckCircleIcon size={15} />
+      <span>Send OTP</span>
+    </span>
+  )}
+</button>
         </div>
+        {otpSent && !otpVerified && (
+  <div className="form-field" style={{ marginTop: '1rem' }}>
+    <label className="field-label">Enter 6-Digit OTP</label>
+
+    <input
+      type="text"
+      className="text-input mono"
+      placeholder="Enter OTP"
+      value={otp}
+      maxLength={6}
+      inputMode="numeric"
+      onChange={(e) =>
+        setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+      }
+    />
+
+    <button
+      type="button"
+      className="btn btn-md btn-primary btn-full"
+      onClick={verifyOTP}
+      disabled={verifying || otp.length !== 6}
+      style={{ marginTop: '0.5rem' }}
+    >
+      {verifying ? 'Verifying...' : 'Verify OTP'}
+    </button>
+  </div>
+)}
+
+{otpVerified && (
+  <p style={{ color: 'green', fontSize: '0.85rem' }}>
+    <CheckCircleIcon size={15} /> Email Verified Successfully
+  </p>
+)}
 
         <div className="form-field">
           <label className="field-label">Phone Number (Optional)</label>
