@@ -17,6 +17,7 @@ import { VerifiedStaffTab } from '../components/VerifiedStaffTab';
 import { ManageStaffTab } from '../components/ManageStaffTab';
 import { DepartmentsSection } from '../components/DepartmentsSection';
 import { VisitorClearanceTab } from '../components/VisitorClearanceTab';
+import { StaffNotice } from '../components/StaffNotice';
 
 interface SuperAdminPageProps {
   currentUser: User | null;
@@ -389,6 +390,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
 
       {/* 2. Right Dedicated Page Viewport */}
       <main className="admin-content-viewport">
+        <StaffNotice currentUser={currentUser} />
         {/* Dynamic Page Header */}
         <div
           style={{

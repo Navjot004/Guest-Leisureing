@@ -5,67 +5,23 @@ import {
   SearchIcon,
   CheckCircleIcon,
   CopyIcon,
-  ClockIcon,
   CheckIcon,
-  ShieldIcon,
   RefreshIcon,
 } from '../components/Icons';
 
 interface HomePageProps {
   currentUser: User | null;
   onLogout: () => void;
+  view?: 'application' | 'tracking';
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLogout }) => {
+export const HomePage: React.FC<HomePageProps> = ({
+  currentUser,
+  onLogout: _onLogout,
+  view = 'application',
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const isStaffOrAdmin = Boolean(
-    currentUser && (
-      currentUser.role === 'staff' ||
-      currentUser.role === 'dept_admin' ||
-      currentUser.role === 'superadmin' ||
-      currentUser.isDeptAdmin ||
-      currentUser.isSuperAdmin
-    )
-  );
-
-  // Active main tab: 'apply' | 'track' | 'guidelines'
-  const [activeTab, setActiveTab] = useState<'apply' | 'track' | 'guidelines'>('apply');
-
-  // Sync active tab and reference query parameter from URL (e.g. ?tab=track&ref=CTU-VIS-XXXXX)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tabParam = params.get('tab');
-    const refParam = params.get('ref');
-
-    if (tabParam === 'track' || tabParam === 'guidelines' || tabParam === 'apply') {
-      setActiveTab(tabParam as any);
-    }
-
-    if (refParam) {
-      const cleanRef = refParam.trim();
-      setTrackQuery(cleanRef);
-      setActiveTab('track');
-      setTrackingLoading(true);
-      fetch(`/api/guest-requests/track/${encodeURIComponent(cleanRef)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.request) {
-            setTrackedRequest(data.request);
-            setTrackError(null);
-          } else {
-            setTrackError(data.message || 'No record found with this reference code.');
-          }
-        })
-        .catch((err) => {
-          setTrackError(err.message || 'Network error looking up pass.');
-        })
-        .finally(() => {
-          setTrackingLoading(false);
-        });
-    }
-  }, [location.search]);
 
   // Step 1: Visitor Profile & Campus Visit Clearance (Mandatory)
   const [guestName, setGuestName] = useState(currentUser?.name || '');
@@ -113,6 +69,47 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackedRequest, setTrackedRequest] = useState<GuestRequestItem | null>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
+  const isTrackingPage = view === 'tracking';
+
+  // Keep the previous query-string entry points working as route URLs.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    const refParam = params.get('ref');
+
+    if (location.pathname === '/' && tabParam === 'guidelines') {
+      navigate('/about#visitor-guidelines', { replace: true });
+      return;
+    }
+
+    if (location.pathname === '/' && (tabParam === 'track' || refParam)) {
+      const search = refParam ? `?ref=${encodeURIComponent(refParam.trim())}` : '';
+      navigate(`/track${search}`, { replace: true });
+      return;
+    }
+
+    if (location.pathname === '/track' && refParam) {
+      const cleanRef = refParam.trim();
+      setTrackQuery(cleanRef);
+      setTrackingLoading(true);
+      fetch(`/api/guest-requests/track/${encodeURIComponent(cleanRef)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.request) {
+            setTrackedRequest(data.request);
+            setTrackError(null);
+          } else {
+            setTrackError(data.message || 'No record found with this reference code.');
+          }
+        })
+        .catch((err) => {
+          setTrackError(err.message || 'Network error looking up pass.');
+        })
+        .finally(() => {
+          setTrackingLoading(false);
+        });
+    }
+  }, [location.pathname, location.search, navigate]);
 
   // Sync current user info
   useEffect(() => {
@@ -274,175 +271,25 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
   };
 
   return (
-    <div style={{ padding: '1.5rem 1rem 3rem' }}>
-      <main style={{ maxWidth: '1080px', margin: '0 auto' }}>
-        
-        {/* Official Institutional Banner Header */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #1E3A8A 0%, #172554 100%)',
-            color: '#FFFFFF',
-            borderRadius: '10px',
-            padding: '2rem 1.75rem',
-            marginBottom: '1.5rem',
-            boxShadow: '0 4px 15px rgba(30, 58, 138, 0.15)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ maxWidth: '720px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  marginBottom: '10px',
-                }}
-              >
-                <span>🏛️</span>
-                <span>CT UNIVERSITY • CAMPUS VISITOR CLEARANCE PORTAL</span>
+    <div className={`ctu-public-page ${isTrackingPage ? 'ctu-tracking-page' : 'ctu-home-page'}`}>
+      <main className="ctu-public-main">
+        {!isTrackingPage && (
+          <>
+            <section className="ctu-hero ctu-compact-hero" aria-labelledby="ctu-hero-heading">
+              <div className="ctu-hero-copy">
+                <div className="ctu-hero-eyebrow">CT University • Ferozepur Road, Ludhiana</div>
+                <h1 id="ctu-hero-heading">Your Campus Visit Starts Here</h1>
+                <p>Request visit clearance and the campus facilities you need in one place.</p>
               </div>
-              <h1 style={{ fontSize: '1.65rem', fontWeight: 800, margin: '0 0 8px 0', lineHeight: 1.25 }}>
-                Official Campus Visit Clearance & Guest Facilities
-              </h1>
-              <p style={{ fontSize: '0.875rem', color: '#CBD5E1', margin: 0, lineHeight: 1.5 }}>
-                All outside academic visitors (External PhD/Viva Examiners, Visiting Faculty, Keynote Speakers, and Student Guardians) must obtain university visit clearance. You may optionally request transit accommodation in Faculty Quarters, hostel mess dining, and campus gate shuttle below.
-              </p>
-            </div>
+            </section>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#93C5FD', fontWeight: 600, textTransform: 'uppercase' }}>
-                Quick Actions
-              </div>
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{ background: '#FFFFFF', color: '#1E3A8A', fontWeight: 600, justifyContent: 'flex-start' }}
-                onClick={() => setActiveTab('track')}
-              >
-                <SearchIcon size={14} />
-                <span>Track Existing Entry Pass</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#FFFFFF', justifyContent: 'flex-start' }}
-                onClick={() => setActiveTab('guidelines')}
-              >
-                <ClockIcon size={14} />
-                <span>Hostel & Mess Rules</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Staff/Admin Directive Banner */}
-        {isStaffOrAdmin && (
-          <div
-            style={{
-              background: '#FEF3C7',
-              border: '1.5px solid #F59E0B',
-              borderRadius: '8px',
-              padding: '1.125rem 1.25rem',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
-              <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🛡️</span>
-              <div>
-                <div style={{ fontWeight: 700, color: '#92400E', fontSize: '0.95rem' }}>
-                  CT University Staff Notice ({currentUser?.name})
-                </div>
-                <div style={{ color: '#78350F', fontSize: '0.85rem', marginTop: '3px', lineHeight: 1.45 }}>
-                  You are logged in as <strong>{currentUser?.name}</strong> ({currentUser?.email}). 
-                  <strong> Ye form sirf external guests, examiners aur parents ke liye hai.</strong> University staff yahan visit permission apply nahi karte — aapka kaam caretaker desk par room aur mess allot karna hai.
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {(currentUser?.role === 'superadmin' || currentUser?.isSuperAdmin || currentUser?.id === '10001') ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    style={{ background: '#1E3A8A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
-                    onClick={() => navigate('/super-admin')}
-                  >
-                    🏛️ Open Visitor Approvals Desk ➔
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ background: '#0F172A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
-                    onClick={() => navigate('/super-admin/staff')}
-                  >
-                    ⚙️ Staff & Users Console ➔
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ background: '#1E3A8A', color: '#FFF', fontSize: '0.85rem', padding: '0.55rem 1.1rem', fontWeight: 600 }}
-                  onClick={() => {
-                    const dept = (currentUser?.adminDepartment || currentUser?.department || '').toLowerCase();
-                    if (dept.includes('cater') || dept.includes('food')) navigate('/dept-admin/catering');
-                    else if (dept.includes('transport')) navigate('/dept-admin/transport');
-                    else navigate('/dept-admin/accommodation');
-                  }}
-                >
-                  🏢 Open Department Allotment Desk ➔
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Clean Sub-Navigation Tabs */}
-        <div className="uni-tabs-container">
-          <button
-            type="button"
-            className={`uni-tab-btn ${activeTab === 'apply' ? 'active' : ''}`}
-            onClick={() => setActiveTab('apply')}
-          >
-            <ShieldIcon size={16} />
-            <span>1. Campus Visit Clearance & Facilities Request</span>
-          </button>
-
-          <button
-            type="button"
-            className={`uni-tab-btn ${activeTab === 'track' ? 'active' : ''}`}
-            onClick={() => setActiveTab('track')}
-          >
-            <SearchIcon size={16} />
-            <span>2. Track Entry Pass & Allotment Status</span>
-          </button>
-
-          <button
-            type="button"
-            className={`uni-tab-btn ${activeTab === 'guidelines' ? 'active' : ''}`}
-            onClick={() => setActiveTab('guidelines')}
-          >
-            <ClockIcon size={16} />
-            <span>3. Visitor & Hostel Guidelines</span>
-          </button>
-        </div>
-
-        {/* =========================================================================
-            TAB 1: OFFICIAL CAMPUS VISIT CLEARANCE & OPTIONAL FACILITIES
-           ========================================================================= */}
-        {activeTab === 'apply' && (
-          <div className="uni-card">
+            <div id="visitor-application" className="uni-card ctu-reservation-experience">
+            <ol className="ctu-reservation-progress" aria-label="Application progress">
+              <li className="active"><span>01</span>Visitor details</li>
+              <li><span>02</span>Accommodation</li>
+              <li><span>03</span>Dining & transport</li>
+              <li><span>04</span>Review & submit</li>
+            </ol>
             {submitSuccess ? (
               <div style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
                 <div
@@ -520,9 +367,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     type="button"
                     className="btn btn-primary"
                     onClick={() => {
-                      setTrackQuery(submitSuccess.referenceCode);
-                      setActiveTab('track');
-                      setTrackedRequest(submitSuccess.request);
+                      navigate(`/track?ref=${encodeURIComponent(submitSuccess.referenceCode)}`);
                     }}
                   >
                     <SearchIcon size={14} />
@@ -545,26 +390,27 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
               </div>
             ) : (
               <form onSubmit={handleApplyStay}>
-                <div className="uni-card-header">
+                <div className="uni-card-header ctu-form-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ background: '#EEF2FF', color: '#1E3A8A', padding: '3px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.04em' }}>
+                    <span className="ctu-form-kicker">
                       VISITOR CLEARANCE & GATE PASS
                     </span>
-                    <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                    <span className="ctu-form-audience">
                       Examiners • Guest Faculty • Parents • Conference Attendees
                     </span>
                   </div>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
+                  <h2 className="ctu-form-title">
                     Application for Campus Visit Clearance & Guest Facilities
                   </h2>
-                  <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
+                  <p className="ctu-form-description">
                     Please provide your official visitor profile and institutional endorsement details. Once submitted, your visit clearance will be issued, and any optional on-campus lodging or mess dining will be coordinated by the Caretaker Desk.
                   </p>
                 </div>
 
-                <div className="uni-card-body">
+                <div className="uni-card-body ctu-application-body">
                   {formError && (
                     <div
+                      className="ctu-form-error"
                       style={{
                         padding: '12px 16px',
                         background: '#FEF2F2',
@@ -582,12 +428,12 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                   {/* =======================================================
                       PART 1: VISITOR IDENTIFICATION & ENDORSEMENT (MANDATORY)
                      ======================================================= */}
-                  <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1.5px solid #E2E8F0', paddingBottom: '8px', marginBottom: '1.25rem' }}>
-                      <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#1E3A8A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                  <div className="ctu-form-step ctu-form-step-visitor" style={{ marginBottom: '2rem' }}>
+                    <div className="ctu-form-step-heading">
+                      <span className="ctu-form-step-number">
                         1
                       </span>
-                      <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                      <h3>
                         Official Visitor Profile & Campus Visit Purpose (Mandatory)
                       </h3>
                     </div>
@@ -651,6 +497,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                           <option value="Conference / Seminar Delegate">Conference / Seminar Delegate</option>
                           <option value="Sports / University Team Member">Sports / University Team Member</option>
                           <option value="Official Academic / Regulatory Guest">Official Academic / Regulatory Guest</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
 
@@ -669,7 +516,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
                       <div>
                         <label className="label-ui" style={{ display: 'block', marginBottom: '6px' }}>
-                          Host Department at CT University *
+                          Host Department*
                         </label>
                         <input
                           type="text"
@@ -726,37 +573,37 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                   {/* =======================================================
                       PART 2: OPTIONAL CAMPUS FACILITIES (CHOOSE WHAT YOU NEED)
                      ======================================================= */}
-                  <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid #E2E8F0', paddingBottom: '8px', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '8px' }}>
+                  <div className="ctu-form-step ctu-form-step-facilities" style={{ marginBottom: '2rem' }}>
+                    <div className="ctu-form-step-heading ctu-form-step-heading-facilities">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#059669', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+                        <span className="ctu-form-step-number">
                           2
                         </span>
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                        <h3>
                           Campus Hospitality & Facilities (Optional Add-ons)
                         </h3>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                      <span className="ctu-form-step-helper">
                         Tick checkboxes below only if you require lodging, mess meals, or gate shuttle.
                       </span>
                     </div>
 
                     {/* FACILITY A: ON-CAMPUS LODGING */}
-                    <div style={{ border: reqAccommodation ? '1.5px solid #1E3A8A' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.25rem', background: reqAccommodation ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                    <div className={`ctu-facility-card ${reqAccommodation ? 'selected' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '1.4rem' }}>🛏️</span>
+                          <span className="ctu-facility-icon">🛏️</span>
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                            <div className="ctu-facility-title">
                               On-Campus Transit Accommodation
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            <div className="ctu-facility-description">
                               Faculty Transit Quarters & Hostel Guest Rooms for overnight academic duty.
                             </div>
                           </div>
                         </div>
 
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqAccommodation ? '#1E3A8A' : '#F1F5F9', color: reqAccommodation ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        <label className={`ctu-facility-toggle ${reqAccommodation ? 'selected' : ''}`}>
                           <input
                             type="checkbox"
                             checked={reqAccommodation}
@@ -767,20 +614,20 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                       </div>
 
                       {reqAccommodation ? (
-                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                        <div className="ctu-facility-details">
                           <div className="uni-room-grid">
                             <div
                               className={`uni-room-card ${roomType === 'Faculty Transit Room' ? 'selected' : ''}`}
                               onClick={() => setRoomType('Faculty Transit Room')}
                             >
                               <span className="uni-room-tag">FACULTY TRANSIT</span>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
+                              <div className="ctu-room-title">
                                 Faculty Transit Room
                               </div>
-                              <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
+                              <p className="ctu-room-description">
                                 Single/Twin study room with study desk and attached washroom for visiting examiners & guest professors.
                               </p>
-                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                              <div className="ctu-room-choice">
                                 {roomType === 'Faculty Transit Room' ? '✓ Selected' : 'Select Room'}
                               </div>
                             </div>
@@ -789,14 +636,14 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                               className={`uni-room-card ${roomType === 'Hostel Guest Room' ? 'selected' : ''}`}
                               onClick={() => setRoomType('Hostel Guest Room')}
                             >
-                              <span className="uni-room-tag" style={{ background: '#FEF3C7', color: '#92400E' }}>HOSTEL WING</span>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
+                              <span className="uni-room-tag">HOSTEL WING</span>
+                              <div className="ctu-room-title">
                                 Hostel Guest Room
                               </div>
-                              <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
+                              <p className="ctu-room-description">
                                 Dedicated visitor rooms located in Boys/Girls Hostel guest wings for student parents & research scholars.
                               </p>
-                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                              <div className="ctu-room-choice">
                                 {roomType === 'Hostel Guest Room' ? '✓ Selected' : 'Select Room'}
                               </div>
                             </div>
@@ -805,14 +652,14 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                               className={`uni-room-card ${roomType === 'Common Dormitory Bed' ? 'selected' : ''}`}
                               onClick={() => setRoomType('Common Dormitory Bed')}
                             >
-                              <span className="uni-room-tag" style={{ background: '#ECFDF5', color: '#065F46' }}>DORMITORY</span>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A', marginBottom: '4px' }}>
+                              <span className="uni-room-tag">DORMITORY</span>
+                              <div className="ctu-room-title">
                                 Common Dormitory Bed
                               </div>
-                              <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: '1.4', margin: 0 }}>
+                              <p className="ctu-room-description">
                                 Shared hall bed with individual locker. Best for student delegations, workshops & university sports events.
                               </p>
-                              <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#1E3A8A', fontWeight: 600 }}>
+                              <div className="ctu-room-choice">
                                 {roomType === 'Common Dormitory Bed' ? '✓ Selected' : 'Select Room'}
                               </div>
                             </div>
@@ -875,21 +722,21 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     </div>
 
                     {/* FACILITY B: HOSTEL MESS DINING */}
-                    <div style={{ border: reqFood ? '1.5px solid #059669' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.25rem', background: reqFood ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                    <div className={`ctu-facility-card ${reqFood ? 'selected' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '1.4rem' }}>🍽️</span>
+                          <span className="ctu-facility-icon">🍽️</span>
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                            <div className="ctu-facility-title">
                               Hostel Mess Dining Meal Passes
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            <div className="ctu-facility-description">
                               Freshly prepared vegetarian hostel mess thali in Campus Dining Hall.
                             </div>
                           </div>
                         </div>
 
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqFood ? '#059669' : '#F1F5F9', color: reqFood ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        <label className={`ctu-facility-toggle ${reqFood ? 'selected' : ''}`}>
                           <input
                             type="checkbox"
                             checked={reqFood}
@@ -900,7 +747,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                       </div>
 
                       {reqFood ? (
-                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                        <div className="ctu-facility-details">
                           <div style={{ fontSize: '0.8125rem', color: '#475569', marginBottom: '8px' }}>
                             Choose required daily mess meals:
                           </div>
@@ -953,21 +800,21 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                     </div>
 
                     {/* FACILITY C: CAMPUS GATE TRANSIT / SHUTTLE */}
-                    <div style={{ border: reqTransport ? '1.5px solid #0284C7' : '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem', background: reqTransport ? '#F8FAFC' : '#FFFFFF', transition: 'all 0.15s ease' }}>
+                    <div className={`ctu-facility-card ${reqTransport ? 'selected' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '1.4rem' }}>🚗</span>
+                          <span className="ctu-facility-icon">🚗</span>
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0F172A' }}>
+                            <div className="ctu-facility-title">
                               Campus Gate Shuttle / Local Transit Assistance
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                            <div className="ctu-facility-description">
                               University shuttle from Main Security Gate or City Station to academic departments.
                             </div>
                           </div>
                         </div>
 
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: reqTransport ? '#0284C7' : '#F1F5F9', color: reqTransport ? '#FFFFFF' : '#334155', padding: '6px 14px', borderRadius: '6px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        <label className={`ctu-facility-toggle ${reqTransport ? 'selected' : ''}`}>
                           <input
                             type="checkbox"
                             checked={reqTransport}
@@ -978,7 +825,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                       </div>
 
                       {reqTransport ? (
-                        <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #E2E8F0' }}>
+                        <div className="ctu-facility-details">
                           <div className="responsive-form-grid">
                             <div>
                               <label className="label-ui" style={{ display: 'block', marginBottom: '4px' }}>
@@ -1039,28 +886,28 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                   {/* =======================================================
                       PART 3: SUMMARY OVERVIEW & SUBMIT
                      ======================================================= */}
-                  <div style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div className="ctu-form-summary">
+                    <div className="ctu-form-summary-title">
                       Application Summary:
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', fontSize: '0.85rem' }}>
-                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: '#1E3A8A', fontWeight: 600 }}>
+                    <div className="ctu-form-summary-items">
+                      <span className="ctu-summary-chip ctu-summary-clearance">
                         🏛️ Campus Visit Clearance: Mandatory
                       </span>
-                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqAccommodation ? '#92400E' : '#64748B' }}>
+                      <span className={`ctu-summary-chip ${reqAccommodation ? 'selected' : ''}`}>
                         🛏️ Lodging: {reqAccommodation ? `${roomType} (${guestsCount} Person)` : 'Not Requested'}
                       </span>
-                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqFood ? '#065F46' : '#64748B' }}>
+                      <span className={`ctu-summary-chip ${reqFood ? 'selected' : ''}`}>
                         🍽️ Mess Meals: {reqFood ? meals.join(', ') : 'Not Requested'}
                       </span>
-                      <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '4px', color: reqTransport ? '#0369A1' : '#64748B' }}>
+                      <span className={`ctu-summary-chip ${reqTransport ? 'selected' : ''}`}>
                         🚗 Shuttle: {reqTransport ? pickupLoc : 'Own Conveyance'}
                       </span>
                     </div>
                   </div>
 
                   {/* Submission Buttons */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+                  <div className="ctu-form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
                       className="btn btn-secondary"
@@ -1085,14 +932,22 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
                 </div>
               </form>
             )}
-          </div>
+            </div>
+          </>
         )}
 
         {/* =========================================================================
-            TAB 2: TRACK APPLICATION / CHECK-IN PASS
+            TRACK APPLICATION / CHECK-IN PASS
            ========================================================================= */}
-        {activeTab === 'track' && (
-          <div className="uni-card">
+        {isTrackingPage && (
+          <div className="uni-card ctu-tracking-experience">
+            <header className="ctu-tracking-header">
+              <span>Visitor Services / Track</span>
+              <h2>Follow your campus visit.</h2>
+              <button type="button" className="ctu-tracking-back" onClick={() => navigate('/#visitor-application')}>
+                Back to application form
+              </button>
+            </header>
             <div className="uni-card-header">
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
                 Track Campus Entry Pass & Allotment Status
@@ -1524,90 +1379,6 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onLogout: _onLo
 
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* =========================================================================
-            TAB 3: HOSTEL & MESS GUIDELINES
-           ========================================================================= */}
-        {activeTab === 'guidelines' && (
-          <div className="uni-card">
-            <div className="uni-card-header">
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px' }}>
-                CT University • Campus Visitor & Hostel Guidelines
-              </h2>
-              <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
-                Please review the institutional transit lodging, mess schedule, and security check-in protocols.
-              </p>
-            </div>
-
-            <div className="uni-card-body">
-              <div className="responsive-form-grid" style={{ marginBottom: '1.5rem' }}>
-                {/* Guideline 1 */}
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🪪</span>
-                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Gate Check-In & Photo ID</strong>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                    All external visitors must carry a valid Government-issued Photo ID (Aadhaar / Voter ID / Passport / Institutional Faculty ID) and present their Reference Code at the Main Security Gate.
-                  </p>
-                </div>
-
-                {/* Guideline 2 */}
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🚪</span>
-                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Gate Curfew & Check-In Timings</strong>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                    Standard Check-in is from 12:00 PM onwards, and Check-out is by 11:00 AM. In accordance with university campus security, main hostel gates close at 10:00 PM strictly. Late arrivals must inform the Caretaker Desk in advance.
-                  </p>
-                </div>
-
-                {/* Guideline 3 */}
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🍽️</span>
-                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Hostel Mess Meal Timings</strong>
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.6' }}>
-                    <div>• <strong>Breakfast:</strong> 07:30 AM – 09:15 AM</div>
-                    <div>• <strong>Lunch:</strong> 12:15 PM – 02:00 PM</div>
-                    <div>• <strong>Dinner:</strong> 07:30 PM – 09:15 PM</div>
-                    <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#64748B' }}>
-                      Standard pure vegetarian thali served. For special dietary needs, kindly inform the mess supervisor.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Guideline 4 */}
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🚭</span>
-                    <strong style={{ color: '#0F172A', fontSize: '0.95rem' }}>Campus Decorum & Prohibitions</strong>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#475569', lineHeight: '1.5', margin: 0 }}>
-                    CT University maintains a strict zero-tolerance policy against smoking, alcohol, and narcotic substances on campus premises. Please maintain academic decorum and respect hostel quiet hours after 10:00 PM.
-                  </p>
-                </div>
-              </div>
-
-              {/* Contact Helpdesk Box */}
-              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: '#1E3A8A', fontSize: '0.9rem' }}>
-                    Hostel Warden & Caretaker Allotment Helpdesk
-                  </div>
-                  <div style={{ fontSize: '0.8125rem', color: '#1E40AF', marginTop: '2px' }}>
-                    For urgent room verification or night transit inquiries, contact the Facility Control Room.
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1E3A8A' }}>
-                  📞 +91 161 520 2222 / 520 2200
-                </div>
-              </div>
             </div>
           </div>
         )}

@@ -6,8 +6,24 @@ const User = require('../models/User');
 const VerifiedStaff = require('../models/VerifiedStaff');
 const { verifyToken, JWT_SECRET } = require('../middleware/auth');
 
+const crypto = require('crypto');
+const EmailOTP = require('../models/EmailOTP');
+const { sendOTPEmail } = require('../services/emailService');
+
 const SUPER_ADMIN_ID = process.env.SUPER_ADMIN_ID || '10001';
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'Master@2026';
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+const OTP_MAX_ATTEMPTS = 5;
+const VERIFICATION_TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function hashVerificationValue(email, value) {
+  return crypto
+    .createHash('sha256')
+    .update(`${email}:${value}:${JWT_SECRET}`)
+    .digest('hex');
+}
 
 // @route   POST /api/auth/login
 // @desc    Login either Super Admin (hardcoded 10001 / Master@2026) or registered Guest/Staff
@@ -124,9 +140,193 @@ router.post('/login', async (req, res) => {
 // @route   POST /api/auth/register
 // @route   POST /api/auth/register
 // @desc    Register a new Guest user into MongoDB Atlas (Staff is provisioned by Super Admin only)
+
+
+// @route POST /api/auth/send-otp
+// @desc Send email verification OTP to a new guest
+router.post('/send-otp', async (req, res) => {
+  try {
+    const email = (req.body.email || '').toString().trim().toLowerCase();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address.',
+      });
+    }
+
+    // Do not allow OTP registration for an existing account
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email is already registered.',
+      });
+    }
+
+    let otpRecord = await EmailOTP.findOne({ email });
+
+    // Resend cooldown
+    if (
+      otpRecord &&
+      otpRecord.lastSentAt &&
+      Date.now() - otpRecord.lastSentAt.getTime() <
+        OTP_RESEND_COOLDOWN_MS
+    ) {
+      const remainingSeconds = Math.ceil(
+        (OTP_RESEND_COOLDOWN_MS -
+          (Date.now() - otpRecord.lastSentAt.getTime())) / 1000
+      );
+
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
+      });
+    }
+
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    if (!otpRecord) {
+      otpRecord = new EmailOTP({ email });
+    }
+
+    otpRecord.otpHash = hashVerificationValue(email, otp);
+    otpRecord.expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+    otpRecord.attempts = 0;
+    otpRecord.lastSentAt = new Date();
+    otpRecord.verificationTokenHash = '';
+    otpRecord.verificationTokenExpiresAt = null;
+    otpRecord.verifiedAt = null;
+
+    await otpRecord.save();
+
+    try {
+      await sendOTPEmail({ to: email, otp });
+    } catch (mailError) {
+      // Do not leave an active OTP if email delivery fails
+      otpRecord.otpHash = '';
+      otpRecord.expiresAt = null;
+      await otpRecord.save();
+
+      console.error('OTP email error:', mailError.message);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Unable to send verification email. Please try again later.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'OTP sent successfully to your email address.',
+    });
+  } catch (error) {
+    console.error('Send OTP error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while sending OTP.',
+    });
+  }
+});
+
+// @route POST /api/auth/verify-otp
+// @desc Verify OTP and issue a temporary registration token
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const email = (req.body.email || '').toString().trim().toLowerCase();
+    const otp = (req.body.otp || '').toString().trim();
+
+    if (!email || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email and 6-digit OTP.',
+      });
+    }
+
+    const otpRecord = await EmailOTP.findOne({ email });
+
+    if (!otpRecord || !otpRecord.otpHash) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please request a new OTP first.',
+      });
+    }
+
+    if (!otpRecord.expiresAt || otpRecord.expiresAt.getTime() < Date.now()) {
+      otpRecord.otpHash = '';
+      otpRecord.expiresAt = null;
+      await otpRecord.save();
+
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.',
+      });
+    }
+
+    if (otpRecord.attempts >= OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({
+        success: false,
+        message: 'Maximum OTP attempts reached. Please request a new OTP.',
+      });
+    }
+
+    otpRecord.attempts += 1;
+
+    const submittedHash = hashVerificationValue(email, otp);
+
+    if (submittedHash !== otpRecord.otpHash) {
+      await otpRecord.save();
+
+      return res.status(400).json({
+        success: false,
+        message: `Incorrect OTP. ${OTP_MAX_ATTEMPTS - otpRecord.attempts} attempts remaining.`,
+      });
+    }
+
+    // OTP is correct. Generate a one-time registration token.
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    otpRecord.otpHash = '';
+    otpRecord.expiresAt = null;
+    otpRecord.verificationTokenHash = hashVerificationValue(
+      email,
+      verificationToken
+    );
+    otpRecord.verificationTokenExpiresAt = new Date(
+      Date.now() + VERIFICATION_TOKEN_EXPIRY_MS
+    );
+    otpRecord.verifiedAt = new Date();
+
+    await otpRecord.save();
+
+    return res.json({
+      success: true,
+      message: 'Email verified successfully.',
+      verificationToken,
+    });
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while verifying OTP.',
+    });
+  }
+});
+
+
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, preferences } = req.body;
+    const {
+  name,
+  email,
+  password,
+  phone,
+  preferences,
+  verificationToken,
+} = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ 
@@ -162,6 +362,44 @@ router.post('/register', async (req, res) => {
         message: 'Password must be at least 6 characters long.' 
       });
     }
+
+    // Require verified email before creating a guest account
+if (!verificationToken) {
+  return res.status(403).json({
+    success: false,
+    message: 'Please verify your email address before registering.',
+  });
+}
+
+const tokenHash = hashVerificationValue(
+  cleanEmail,
+  verificationToken
+);
+
+// Atomically consume the token so it cannot be reused
+const verifiedRecord = await EmailOTP.findOneAndUpdate(
+  {
+    email: cleanEmail,
+    verificationTokenHash: tokenHash,
+    verificationTokenExpiresAt: { $gt: new Date() },
+    verifiedAt: { $ne: null },
+  },
+  {
+    $set: {
+      verificationTokenHash: '',
+      verificationTokenExpiresAt: null,
+      verifiedAt: null,
+    },
+  },
+  { new: false }
+);
+
+if (!verifiedRecord) {
+  return res.status(403).json({
+    success: false,
+    message: 'Email verification is invalid or expired. Please verify again.',
+  });
+}
 
     // Hash password
     const salt = await bcrypt.genSalt(10);

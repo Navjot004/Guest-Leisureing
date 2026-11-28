@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { User } from '../types';
 import {
   LockIcon,
@@ -16,9 +16,20 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   onLogout,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('ctu-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => (current === 'light' ? 'dark' : 'light'));
 
   return (
-    <header className="portal-topbar">
+    <header className={`portal-topbar ${location.pathname === '/' ? 'portal-topbar-public' : ''}`}>
       {/* Left: Brand Crest & Institutional Identity */}
       <div className="portal-topbar-left">
         <a href="/" className="portal-brand-link">
@@ -36,17 +47,25 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           <>
             <button
               type="button"
-              className="portal-nav-pill"
-              onClick={() => navigate('/?tab=track')}
+              className={`portal-nav-pill ${location.pathname === '/about' ? 'active' : ''}`}
+              onClick={() => navigate('/about')}
             >
-              <SearchIcon size={14} />
-              <span>Track Entry Pass</span>
+              <span>About</span>
             </button>
 
             <button
               type="button"
-              className="portal-nav-pill"
-              onClick={() => navigate('/?tab=guidelines')}
+              className={`portal-nav-pill ${location.pathname === '/track' ? 'active' : ''}`}
+              onClick={() => navigate('/track')}
+            >
+              <SearchIcon size={14} />
+              <span>Track Application</span>
+            </button>
+
+            <button
+              type="button"
+              className={`portal-nav-pill ${location.pathname === '/about' && location.hash === '#visitor-guidelines' ? 'active' : ''}`}
+              onClick={() => navigate('/about#visitor-guidelines')}
             >
               <span>🕒 Campus Visitor Guidelines</span>
             </button>
@@ -56,6 +75,15 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
 
       {/* Right: User Status & Sign Out */}
       <div className="portal-topbar-right">
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+          {theme === 'light' ? '☾' : '☀'}
+        </button>
         {currentUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div className="portal-user-meta" style={{ textAlign: 'right' }}>

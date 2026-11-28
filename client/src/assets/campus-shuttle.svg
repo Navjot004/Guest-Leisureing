@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Campus shuttle placeholder">
+  <rect width="800" height="500" fill="#DBEAFE"/>
+  <rect y="350" width="800" height="150" fill="#475569"/>
+  <g fill="#1E3A8A"><rect x="160" y="140" width="480" height="250" rx="46"/><rect x="210" y="175" width="380" height="115" rx="20" fill="#BFDBFE"/></g>
+  <g fill="#0F172A"><circle cx="290" cy="390" r="58"/><circle cx="510" cy="390" r="58"/></g>
+  <rect x="310" y="205" width="180" height="58" rx="8" fill="#FFFFFF"/>
+  <text x="400" y="242" text-anchor="middle" fill="#1E3A8A" font-family="Arial" font-size="28" font-weight="700">CT SHUTTLE</text>
+</svg>
